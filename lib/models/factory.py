@@ -6,9 +6,9 @@ from lib.config import ModelConfig, AppConfig
 
 
 def create_client(config: ModelConfig) -> BaseModelClient:
-    api_key = os.getenv(config.api_key_env, "")
+    api_key = config.api_key or os.getenv(config.api_key_env, "")
     if not api_key:
-        raise ValueError(f"API key not found: {config.api_key_env}")
+        raise ValueError(f"API key not found for model {config.name}")
 
     if config.provider == "openai_compat":
         return OpenAICompatClient(

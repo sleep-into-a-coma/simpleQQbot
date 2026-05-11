@@ -71,13 +71,14 @@ async def handle_chat(event: MessageEvent):
     if not allowed:
         await chat_handler.finish(reason)
 
-    # Step 3: Check for trigger alias (/A /B /C)
+    # Step 3: Check for model prefix trigger (/A /B /C)
     trigger_model = None
     msg_text = user_text
-    for alias, model_name in app_config.aliases.items():
-        if user_text.startswith(f"/{alias} "):
-            trigger_model = model_name
-            msg_text = user_text[len(alias) + 2:].strip()
+    for m in app_config.models:
+        prefix = f"/{m.name} "
+        if user_text.startswith(prefix):
+            trigger_model = m.name
+            msg_text = user_text[len(prefix):].strip()
             break
 
     # Step 4: Resolve persistent model binding

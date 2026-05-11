@@ -12,6 +12,7 @@ class ModelConfig:
     model: str
     supports_vision: bool = False
     api_base: Optional[str] = None
+    api_key: str = ""
     api_key_env: str = ""
 
 @dataclass
@@ -24,7 +25,6 @@ class AppConfig:
     default_model: str
     models: list[ModelConfig]
     vision_fallback: ModelConfig
-    aliases: dict[str, str]
     search_enabled: bool
     search_max_results: int
     default_personality: str
@@ -36,40 +36,84 @@ class AppConfig:
     rate_limit_group_per_minute: int
 
 
-def _load_models() -> tuple[str, list[ModelConfig], ModelConfig, dict[str, str], bool, int]:
-    with open(CONFIG_DIR / "models.yaml", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
+def _load_models_from_env() -> tuple[str, list[ModelConfig], ModelConfig, bool, int]:
+    import os
+
+    # Discover model IDs from MODEL_*_NAME env vars
+    model_ids = set()
+    for key in os.environ:
+        if key.startswith("MODEL_") and key.endswith("_NAME"):
+            mid = key[len("MODEL_"):-len("_NAME")]
+            model_ids.add(mid)
+
+    if not model_ids:
+        raise ValueError(
+            "No models configured. Set MODEL_<ID>_NAME, MODEL_<ID>_PROVIDER, "
+            "MODEL_<ID>_API_KEY in .env"
+        )
 
     models = []
-    for name, m in data["models"].items():
+    for mid in sorted(model_ids):
+        name = os.getenv(f"MODEL_{mid}_NAME", "")
+        provider = os.getenv(f"MODEL_{mid}_PROVIDER", "")
+        api_key = os.getenv(f"MODEL_{mid}_API_KEY", "")
+        api_base = os.getenv(f"MODEL_{mid}_API_BASE") or None
+        vision = os.getenv(f"MODEL_{mid}_VISION", "false").lower() == "true"
+
+        if not name or not provider or not api_key:
+            missing = []
+            if not name:
+                missing.append("NAME")
+            if not provider:
+                missing.append("PROVIDER")
+            if not api_key:
+                missing.append("API_KEY")
+            raise ValueError(
+                f"Model '{mid}' is missing required fields: {', '.join(missing)}. "
+                f"Set MODEL_{mid}_NAME, MODEL_{mid}_PROVIDER, MODEL_{mid}_API_KEY"
+            )
+
         models.append(ModelConfig(
-            name=name,
-            provider=m["provider"],
-            model=m["model"],
-            supports_vision=m.get("supports_vision", False),
-            api_base=m.get("api_base"),
-            api_key_env=m.get("api_key_env", ""),
+            name=mid,
+            provider=provider,
+            model=name,
+            supports_vision=vision,
+            api_base=api_base,
+            api_key=api_key,
         ))
 
-    vf = data["vision_fallback"]
+    default_model = os.getenv("DEFAULT_MODEL", "")
+    if not default_model:
+        raise ValueError("DEFAULT_MODEL is required in .env")
+
+    model_ids_set = {m.name for m in models}
+    if default_model not in model_ids_set:
+        raise ValueError(
+            f"DEFAULT_MODEL='{default_model}' not found in configured models: {model_ids_set}"
+        )
+
+    # Vision fallback
+    vf_name = os.getenv("VISION_FALLBACK_NAME", "")
+    vf_provider = os.getenv("VISION_FALLBACK_PROVIDER", "")
+    vf_api_key = os.getenv("VISION_FALLBACK_API_KEY", "")
+    if not all([vf_name, vf_provider, vf_api_key]):
+        raise ValueError(
+            "VISION_FALLBACK_NAME, VISION_FALLBACK_PROVIDER, VISION_FALLBACK_API_KEY are required"
+        )
+
     vision_fallback = ModelConfig(
         name="vision_fallback",
-        provider=vf["provider"],
-        model=vf["model"],
+        provider=vf_provider,
+        model=vf_name,
         supports_vision=True,
-        api_base=vf.get("api_base"),
-        api_key_env=vf.get("api_key_env", ""),
+        api_base=os.getenv("VISION_FALLBACK_API_BASE") or None,
+        api_key=vf_api_key,
     )
 
-    search = data.get("search", {})
-    return (
-        data["default"],
-        models,
-        vision_fallback,
-        data.get("aliases", {}),
-        search.get("enabled", True),
-        search.get("max_results", 5),
-    )
+    search_enabled = os.getenv("SEARCH_ENABLED", "true").lower() == "true"
+    search_max = int(os.getenv("SEARCH_MAX_RESULTS", "5"))
+
+    return default_model, models, vision_fallback, search_enabled, search_max
 
 
 def _load_personalities() -> tuple[str, list[PersonalityConfig]]:
@@ -100,7 +144,7 @@ def _load_permissions() -> tuple[list[str], list[str], list[str], int, int]:
 
 def load_config() -> AppConfig:
     """Load all config and return a single AppConfig object."""
-    default_model, models, vision_fallback, aliases, search_enabled, search_max = _load_models()
+    default_model, models, vision_fallback, search_enabled, search_max = _load_models_from_env()
     default_personality, personalities = _load_personalities()
     admins, wl_users, wl_groups, rl_user, rl_group = _load_permissions()
 
@@ -108,7 +152,6 @@ def load_config() -> AppConfig:
         default_model=default_model,
         models=models,
         vision_fallback=vision_fallback,
-        aliases=aliases,
         search_enabled=search_enabled,
         search_max_results=search_max,
         default_personality=default_personality,
