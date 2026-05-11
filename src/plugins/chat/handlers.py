@@ -51,9 +51,9 @@ async def handle_help(event: MessageEvent):
     help_text = """可用指令：
 /help - 显示此帮助
 /models - 列出可用模型
-/model <模型名> - 切换当前对话的 AI 模型
+/model <字母> - 切换当前对话的 AI 模型（如 /model A）
 /set <人格名> - 切换 Bot 人格
-/A /B /C - 临时用对应模型回复本条消息
+/字母 消息 - 临时用对应模型回复本条（如 /B 你好）
 /status - 查看当前配置
 /summarize - 总结当前对话
 /clear - 清除对话记忆
@@ -67,13 +67,11 @@ models_cmd = on_command("models", priority=10)
 @models_cmd.handle()
 async def handle_models(event: MessageEvent):
     lines = ["可用模型："]
+    default = app_config.default_model
     for m in app_config.models:
-        vision_tag = "👁" if m.supports_vision else ""
-        lines.append(f"  {m.name} {vision_tag}")
-    if app_config.aliases:
-        lines.append("\n触发别名：")
-        for alias, model in app_config.aliases.items():
-            lines.append(f"  /{alias} -> {model}")
+        vision_tag = " [vision]" if m.supports_vision else ""
+        default_tag = " [默认]" if m.name == default else ""
+        lines.append(f"  {m.name} - {m.model} ({m.provider}){vision_tag}{default_tag}")
     await models_cmd.finish("\n".join(lines))
 
 
@@ -96,18 +94,19 @@ model_cmd = on_command("model", priority=10)
 
 @model_cmd.handle()
 async def handle_model(event: MessageEvent, args: Message = CommandArg()):
-    name = args.extract_plain_text().strip()
-    if not name:
-        await model_cmd.finish("用法：/model <模型名>")
+    mid = args.extract_plain_text().strip()
+    if not mid:
+        await model_cmd.finish("用法：/model <字母>")
 
-    valid_models = [m.name for m in app_config.models]
-    if name not in valid_models:
-        await model_cmd.finish(f"未知模型：{name}。可用：{', '.join(valid_models)}")
+    valid_ids = [m.name for m in app_config.models]
+    if mid not in valid_ids:
+        await model_cmd.finish(f"未知模型：{mid}。可用：{', '.join(valid_ids)}")
 
     target_type, target_id = _get_target(event)
     from lib.model_binding import set_model_binding
-    await set_model_binding(target_type, target_id, name)
-    await model_cmd.finish(f"模型已切换为：{name}")
+    await set_model_binding(target_type, target_id, mid)
+    display_name = next((m.model for m in app_config.models if m.name == mid), mid)
+    await model_cmd.finish(f"模型已切换为：{mid} ({display_name})")
 
 
 allow_cmd = on_command("allow", priority=10)
