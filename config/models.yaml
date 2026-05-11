@@ -1,0 +1,38 @@
+default: deepseek-v3
+
+models:
+  deepseek-v3:
+    provider: openai_compat
+    api_base: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+    model: deepseek-chat
+    supports_vision: false
+
+  gpt-4o:
+    provider: openai_compat
+    api_base: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    model: gpt-4o
+    supports_vision: true
+
+  claude-3.5-sonnet:
+    provider: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+    model: claude-3-5-sonnet-20241022
+    supports_vision: true
+
+vision_fallback:
+  provider: openai_compat
+  api_base: https://api.openai.com/v1
+  api_key_env: OPENAI_API_KEY
+  model: gpt-4o-mini
+
+aliases:
+  A: gpt-4o
+  B: deepseek-v3
+  C: claude-3.5-sonnet
+
+search:
+  enabled: true
+  backend: duckduckgo
+  max_results: 5

@@ -1,0 +1,9 @@
+admins: []
+
+whitelist:
+  users: []
+  groups: []
+
+rate_limit:
+  user_per_minute: 10
+  group_per_minute: 30
