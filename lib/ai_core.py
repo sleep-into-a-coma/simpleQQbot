@@ -14,7 +14,11 @@ from lib.tools.search import (
 async def _vision_fallback(image_data: bytes, config: AppConfig) -> str:
     """Use vision fallback model to describe an image."""
     client = create_client(config.vision_fallback)
-    msg = ChatMessage(role="user", content="请用中文一句话描述这张图片的内容。", image_data=image_data)
+    msg = ChatMessage(
+        role="user",
+        content="<user_message>\n请用中文一句话描述这张图片的内容。\n</user_message>",
+        image_data=image_data,
+    )
     response = await client.chat([msg], [])
     return response.content
 
@@ -125,9 +129,14 @@ def _build_initial_messages(
         messages.append(ChatMessage(role="system", content=system_prompt))
 
     for h in history:
-        messages.append(ChatMessage(role=h["role"], content=h["content"]))
+        if h["role"] == "user":
+            content = f"<user_message>\n{h['content']}\n</user_message>"
+        else:
+            content = h["content"]
+        messages.append(ChatMessage(role=h["role"], content=content))
 
-    user_msg = ChatMessage(role="user", content=user_text)
+    wrapped_text = f"<user_message>\n{user_text}\n</user_message>"
+    user_msg = ChatMessage(role="user", content=wrapped_text)
     if image_data:
         user_msg.image_data = image_data
     messages.append(user_msg)
