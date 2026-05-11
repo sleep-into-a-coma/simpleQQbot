@@ -11,3 +11,4 @@ async def on_startup():
 
 
 from .handlers import *  # noqa
+from .router import *  # noqa
