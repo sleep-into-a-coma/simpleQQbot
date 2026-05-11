@@ -32,11 +32,12 @@ async def _extract_image_data(event: MessageEvent) -> bytes | None:
         if seg.type == "image":
             url = seg.data.get("url", "")
             if url:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(url)
-                    if resp.status_code == 200:
-                        return resp.content
+                resp = await _image_client.get(url)
+                if resp.status_code == 200:
+                    return resp.content
     return None
+
+_image_client = httpx.AsyncClient(timeout=30)
 
 
 def _format_metadata(personality_name: str, model_name: str, has_search: bool, has_image: bool, response_time_ms: int) -> str:
