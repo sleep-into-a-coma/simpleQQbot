@@ -37,7 +37,7 @@ async def handle_summarize(event: MessageEvent):
 
     messages = [
         ChatMessage(role="system", content=personality.system_prompt),
-        ChatMessage(role="user", content=f"请用中文简洁总结以下对话的要点，不超过 200 字：\n\n{history_text}"),
+        ChatMessage(role="user", content=f"<user_message>\n请用中文简洁总结以下对话的要点，不超过 200 字：\n\n{history_text}\n</user_message>"),
     ]
 
     response = await client.chat(messages, [])

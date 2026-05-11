@@ -1,7 +1,11 @@
+import re
+
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent
 import httpx
 import time
+
+CQ_PATTERN = re.compile(r'\[CQ:[^\]]+\]')
 
 from lib.context import get_history, save_turn, log_reply
 from lib.permission import check_permission, check_rate_limit
@@ -124,7 +128,7 @@ async def handle_chat(event: MessageEvent):
     )
 
     # Step 12: Build and send reply
-    reply_text = result["content"]
+    reply_text = CQ_PATTERN.sub('', result["content"])
     metadata = _format_metadata(
         personality.name,
         result["model_name"],
