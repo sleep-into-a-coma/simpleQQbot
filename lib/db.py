@@ -59,6 +59,15 @@ async def init_db():
                 UNIQUE(target_type, target_id)
             );
 
+            CREATE TABLE IF NOT EXISTS model_bindings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_type TEXT NOT NULL,
+                target_id TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(target_type, target_id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_memory_lookup
                 ON conversation_memory(group_id, user_id, created_at);
 
