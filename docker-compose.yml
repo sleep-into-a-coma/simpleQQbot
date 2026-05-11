@@ -1,0 +1,8 @@
+services:
+  qqbot:
+    build: .
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
