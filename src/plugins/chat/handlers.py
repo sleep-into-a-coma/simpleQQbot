@@ -8,6 +8,42 @@ from lib.personality import get_personality, bind_personality, get_default_perso
 from . import app_config
 
 
+summarize_cmd = on_command("summarize", aliases={"总结"}, priority=10)
+
+
+@summarize_cmd.handle()
+async def handle_summarize(event: MessageEvent):
+    from lib.context import get_history
+    from lib.models.factory import resolve_model
+    from lib.models.base import ChatMessage
+    from lib.personality import get_personality
+    from lib.model_binding import get_model_binding
+
+    group_id = str(event.group_id) if isinstance(event, GroupMessageEvent) else "private"
+    user_id = str(event.user_id)
+
+    history = await get_history(group_id, user_id)
+    if not history:
+        await summarize_cmd.finish("没有对话历史可总结。")
+
+    history_text = "\n".join(
+        f"{'用户' if h['role'] == 'user' else 'Bot'}: {h['content'][:200]}"
+        for h in history
+    )
+
+    personality = await get_personality(group_id, user_id, app_config)
+    model_name = await get_model_binding(group_id, user_id, app_config.default_model)
+    _, client = resolve_model(app_config, model_name)
+
+    messages = [
+        ChatMessage(role="system", content=personality.system_prompt),
+        ChatMessage(role="user", content=f"请用中文简洁总结以下对话的要点，不超过 200 字：\n\n{history_text}"),
+    ]
+
+    response = await client.chat(messages, [])
+    await summarize_cmd.finish(f"📝 对话总结：\n{response.content}")
+
+
 help_cmd = on_command("help", aliases={"帮助"}, priority=10)
 
 @help_cmd.handle()
@@ -19,6 +55,7 @@ async def handle_help(event: MessageEvent):
 /set <人格名> - 切换 Bot 人格
 /A /B /C - 临时用对应模型回复本条消息
 /status - 查看当前配置
+/summarize - 总结当前对话
 /clear - 清除对话记忆
 /allow @某人 - 允许某人使用 Bot（管理员）
 /ban @某人 - 禁止某人使用 Bot（管理员）"""
