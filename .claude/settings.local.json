@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(env)",
+      "Bash(python3 *)",
+      "Bash(python *)",
+      "WebFetch(domain:testingcf.jsdelivr.net)",
+      "WebSearch",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(mv \"E:/DOCUMENT/WORK/project/p1/.claude/skills/st-creator.md\" \"E:/DOCUMENT/WORK/project/.claude/skills/st-creator.md\")",
+      "Bash(mv \"E:/DOCUMENT/WORK/project/p1/.claude/st-creator-reference.md\" \"E:/DOCUMENT/WORK/project/.claude/st-creator-reference.md\")",
+      "Bash(xxd)",
+      "Bash(mkdir -p __TRACKED_VAR__/.claude/skills/st-creator)",
+      "Bash(cp E:/DOCUMENT/WORK/project/p1/.claude/skills/st-creator/SKILL.md __TRACKED_VAR__/.claude/skills/st-creator/SKILL.md)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git config *)"
+    ]
+  }
+}
