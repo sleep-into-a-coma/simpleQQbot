@@ -10,6 +10,7 @@ class OpenAICompatClient(BaseModelClient):
         self.api_key = api_key
         self.model = model
         self.supports_vision = supports_vision
+        self._http = httpx.AsyncClient(timeout=60)
 
     async def chat(
         self,
@@ -27,17 +28,16 @@ class OpenAICompatClient(BaseModelClient):
             ]
             body["tool_choice"] = "auto"
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                f"{self.api_base}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=body,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await self._http.post(
+            f"{self.api_base}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
         choice = data["choices"][0]["message"]
         content = choice.get("content") or ""

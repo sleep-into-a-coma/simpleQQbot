@@ -8,6 +8,10 @@ from lib.db import get_db
 _user_counters: dict[str, list[float]] = defaultdict(list)
 _group_counters: dict[str, list[float]] = defaultdict(list)
 
+# Periodic cleanup to prevent unbounded key growth
+_cleanup_counter = 0
+_CLEANUP_INTERVAL = 1000
+
 
 def _cleanup_old(ts_list: list[float], window: float = 60.0) -> list[float]:
     """Remove timestamps older than window seconds."""
@@ -15,18 +19,36 @@ def _cleanup_old(ts_list: list[float], window: float = 60.0) -> list[float]:
     return [t for t in ts_list if now - t < window]
 
 
+def _sweep_empty_counters():
+    """Remove entries whose timestamp lists are empty after cleanup."""
+    for counters in (_user_counters, _group_counters):
+        empty = [k for k, v in counters.items() if not v]
+        for k in empty:
+            del counters[k]
+
+
 def check_rate_limit(group_id: str, user_id: str, config: AppConfig) -> tuple[bool, str]:
     """Check rate limits. Returns (allowed, reason_if_blocked)."""
+    global _cleanup_counter
+    _cleanup_counter += 1
+    if _cleanup_counter >= _CLEANUP_INTERVAL:
+        _sweep_empty_counters()
+        _cleanup_counter = 0
+
     now = time.time()
 
     user_key = f"{group_id}:{user_id}"
     user_ts = _cleanup_old(_user_counters[user_key])
+    if not user_ts:
+        del _user_counters[user_key]
     if len(user_ts) >= config.rate_limit_user_per_minute:
         return False, "你的消息太频繁了，请稍后再试~"
     user_ts.append(now)
     _user_counters[user_key] = user_ts
 
     group_ts = _cleanup_old(_group_counters[group_id])
+    if not group_ts:
+        del _group_counters[group_id]
     if len(group_ts) >= config.rate_limit_group_per_minute:
         return False, "本群消息太频繁了，请稍后再试~"
     group_ts.append(now)
