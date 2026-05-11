@@ -1,0 +1,7 @@
+.git
+__pycache__
+*.pyc
+.venv
+data/bot.db
+data/logs/*
+data/test_bot.db
