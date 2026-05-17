@@ -2,6 +2,7 @@ import time
 from lib.config import AppConfig
 from lib.models.base import ChatMessage, ChatResponse, ToolDefinition
 from lib.models.factory import resolve_model, create_client
+from lib.errors import BotException
 from lib.tools.search import (
     SEARCH_TOOL_DEFINITION,
     execute_search,
@@ -19,8 +20,11 @@ async def _vision_fallback(image_data: bytes, config: AppConfig) -> str:
         content="<user_message>\n请用中文一句话描述这张图片的内容。\n</user_message>",
         image_data=image_data,
     )
-    response = await client.chat([msg], [])
-    return response.content
+    try:
+        response = await client.chat([msg], [])
+        return response.content
+    except BotException:
+        return "[图片描述失败，请直接输入文字描述]"
 
 
 async def process_message(
@@ -84,7 +88,10 @@ async def process_message(
                 if tc.name == "web_search":
                     has_search = True
                     query = tc.arguments.get("query", "")
-                    results = execute_search(query, app_config.search_max_results)
+                    try:
+                        results = execute_search(query, app_config.search_max_results)
+                    except Exception:
+                        results = []
                     if results:
                         sources = results
                     tool_result_text = format_search_results(results)

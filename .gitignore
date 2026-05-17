@@ -2,6 +2,10 @@ __pycache__/
 *.pyc
 .venv/
 .env
-data/bot.db
+data/*.db
 data/logs/
 *.egg-info/
+.claude/
+.pytest_cache/
+.idea/
+.vscode/
