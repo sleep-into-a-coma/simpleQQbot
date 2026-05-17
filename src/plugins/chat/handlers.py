@@ -3,7 +3,7 @@ from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Message
 from nonebot.params import CommandArg
 
 from lib.context import clear_history
-from lib.permission import check_permission, set_permission, get_rate_limit_status, get_private_chat_enabled, set_private_chat_enabled
+from lib.permission import check_permission, set_permission, get_rate_limit_status, get_private_chat_enabled, set_private_chat_enabled, get_think_enabled, set_think_enabled, get_think_history
 from lib.personality import get_personality, bind_personality, get_default_personality
 from . import app_config
 
@@ -64,6 +64,8 @@ async def handle_help(event: MessageEvent):
 /allow-p @某人 - 授权某人私聊 Bot（管理员）
 /ban-p @某人 - 撤销某人私聊权限（管理员）
 /private on/off - 全局私聊开关（管理员）
+/think on/off - 全局思维链开关（管理员）
+/Thistory <1/2/3> - 查看对应槽位的思维链
 /admin - 查看管理面板（管理员）"""
     await help_cmd.finish(help_text)
 
@@ -219,6 +221,41 @@ async def handle_private(event: MessageEvent, args: Message = CommandArg()):
     await set_private_chat_enabled(enabled)
     await private_cmd.finish(f"私聊功能已{'开启' if enabled else '关闭'}。")
 
+
+think_cmd = on_command("think", priority=10)
+
+@think_cmd.handle()
+async def handle_think(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await think_cmd.finish("权限不足。")
+    action = args.extract_plain_text().strip()
+    if action not in ("on", "off"):
+        await think_cmd.finish("用法：/think on 或 /think off")
+    enabled = action == "on"
+    await set_think_enabled(enabled)
+    await think_cmd.finish(f"思维链已{'开启' if enabled else '关闭'}。")
+
+thistory_cmd = on_command("Thistory", priority=10)
+
+@thistory_cmd.handle()
+async def handle_thistory(event: MessageEvent, args: Message = CommandArg()):
+    group_id = str(event.group_id) if isinstance(event, GroupMessageEvent) else "private"
+    slot_str = args.extract_plain_text().strip()
+    if not slot_str or not slot_str.isdigit():
+        await thistory_cmd.finish("用法：/Thistory <1/2/3>")
+    slot = int(slot_str)
+    if slot not in (1, 2, 3):
+        await thistory_cmd.finish("请输入 1、2 或 3。")
+    entry = await get_think_history(group_id, slot)
+    if entry is None:
+        await thistory_cmd.finish(f"槽位 {slot} 暂无思维链记录。")
+    await thistory_cmd.finish(
+        f"【思维链 #{slot}】\n"
+        f"用户消息：{entry['user_msg'][:200]}\n"
+        f"时间：{entry['created_at']}\n\n"
+        f"{entry['thinking']}"
+    )
 
 admin_cmd = on_command("admin", priority=10)
 
