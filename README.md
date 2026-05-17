@@ -50,7 +50,7 @@ cp .env.example .env
 | `SEARCH_ENABLED` | 是否启用搜索（`true` / `false`） |
 | `SEARCH_MAX_RESULTS` | 搜索返回条数（默认 5） |
 
-人格配置在 `config/personalities.yaml`，权限白名单在 `config/permissions.yaml`。
+人格配置在 `config/personalities.yaml`，权限白名单和私聊开关在 `config/permissions.yaml`。
 
 ### 运行
 
@@ -74,6 +74,12 @@ Bot 启动后将通过 OneBot 反向 WebSocket 连接 go-cqhttp。
 | `/clear` | 清除对话记忆 |
 | `/allow @某人` | 允许某人使用 Bot（管理员） |
 | `/ban @某人` | 禁止某人使用 Bot（管理员） |
+| `/hire <群号>` | 授权群使用 Bot（管理员） |
+| `/fire <群号>` | 撤销群使用权限（管理员） |
+| `/allow-p @某人` | 授权某人私聊 Bot（管理员） |
+| `/ban-p @某人` | 撤销某人私聊权限（管理员） |
+| `/private on/off` | 全局私聊开关（管理员） |
+| `/admin` | 查看管理面板（管理员） |
 
 ## 错误码
 
