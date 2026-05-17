@@ -73,7 +73,19 @@ async def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_reply_log_time
                 ON reply_log(created_at);
+
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
         """)
+        await db.commit()
+        from lib.config import load_config
+        config = load_config()
+        await db.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            ("private_chat_enabled", "1" if config.private_chat_enabled else "0"),
+        )
         await db.commit()
     finally:
         await db.close()
