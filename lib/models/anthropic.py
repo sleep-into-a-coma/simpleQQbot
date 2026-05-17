@@ -3,6 +3,7 @@ import base64
 from typing import Optional
 import anthropic
 from lib.models.base import BaseModelClient, ChatMessage, ChatResponse, ToolCall, ToolDefinition
+from lib.errors import BotException, E01, E02, E03, E04, E05, E08
 
 
 class AnthropicClient(BaseModelClient):
@@ -43,7 +44,26 @@ class AnthropicClient(BaseModelClient):
         if anthropic_tools:
             kwargs["tools"] = anthropic_tools
 
-        resp = await self.client.messages.create(**kwargs)
+        try:
+            resp = await self.client.messages.create(**kwargs)
+        except anthropic.APITimeoutError:
+            raise BotException(E01)
+        except anthropic.AuthenticationError:
+            raise BotException(E02)
+        except anthropic.RateLimitError:
+            raise BotException(E03)
+        except anthropic.InternalServerError:
+            raise BotException(E04)
+        except anthropic.APIConnectionError:
+            raise BotException(E05)
+        except anthropic.APIStatusError as e:
+            if e.status_code == 429:
+                raise BotException(E03)
+            if e.status_code >= 500:
+                raise BotException(E04)
+            raise BotException(E08, f"HTTP {e.status_code}")
+        except Exception:
+            raise BotException(E08)
 
         content = ""
         tool_calls = []

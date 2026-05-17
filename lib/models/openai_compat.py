@@ -2,6 +2,7 @@ import json
 import httpx
 from typing import Optional
 from lib.models.base import BaseModelClient, ChatMessage, ChatResponse, ToolCall, ToolDefinition
+from lib.errors import BotException, E01, E02, E03, E04, E05, E08
 
 
 class OpenAICompatClient(BaseModelClient):
@@ -28,15 +29,31 @@ class OpenAICompatClient(BaseModelClient):
             ]
             body["tool_choice"] = "auto"
 
-        resp = await self._http.post(
-            f"{self.api_base}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json=body,
-        )
-        resp.raise_for_status()
+        try:
+            resp = await self._http.post(
+                f"{self.api_base}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+            )
+        except httpx.TimeoutException:
+            raise BotException(E01)
+        except httpx.ConnectError:
+            raise BotException(E05)
+        except httpx.NetworkError:
+            raise BotException(E05)
+
+        if resp.status_code == 401 or resp.status_code == 403:
+            raise BotException(E02)
+        if resp.status_code == 429:
+            raise BotException(E03)
+        if resp.status_code >= 500:
+            raise BotException(E04)
+        if resp.status_code != 200:
+            raise BotException(E08, f"HTTP {resp.status_code}")
+
         data = resp.json()
 
         choice = data["choices"][0]["message"]

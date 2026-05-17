@@ -10,10 +10,11 @@ CQ_PATTERN = re.compile(r'\[CQ:[^\]]+\]')
 from lib.context import get_history, save_turn, log_reply
 from lib.permission import check_permission, check_rate_limit
 from lib.personality import get_personality
-from lib.ai_core import process_message, _vision_fallback
+from lib.ai_core import process_message
 from lib.tools.search import format_search_sources
 from lib.model_binding import get_model_binding
 from lib.models.factory import resolve_model
+from lib.errors import BotException, format_error_reply
 from . import app_config
 
 
@@ -101,16 +102,19 @@ async def handle_chat(event: MessageEvent):
     # Step 8: Vision fallback is handled inside process_message
 
     # Step 9: Process with AI
-    result = await process_message(
-        user_text=msg_text,
-        image_data=image_data,
-        group_id=group_id,
-        user_id=user_id,
-        history=history,
-        personality_system_prompt=personality.system_prompt,
-        model_name=resolved_model,
-        app_config=app_config,
-    )
+    try:
+        result = await process_message(
+            user_text=msg_text,
+            image_data=image_data,
+            group_id=group_id,
+            user_id=user_id,
+            history=history,
+            personality_system_prompt=personality.system_prompt,
+            model_name=resolved_model,
+            app_config=app_config,
+        )
+    except BotException as e:
+        await chat_handler.finish(format_error_reply(e))
 
     # Step 10: Save conversation turn
     await save_turn(group_id, user_id, user_text, result["content"])
