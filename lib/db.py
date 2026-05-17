@@ -87,6 +87,11 @@ async def init_db():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (group_id, slot)
             );
+
+            CREATE TABLE IF NOT EXISTS user_names (
+                user_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL
+            );
         """)
         await db.commit()
         from lib.config import load_config
