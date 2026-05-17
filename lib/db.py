@@ -78,6 +78,15 @@ async def init_db():
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS think_history (
+                group_id TEXT NOT NULL,
+                slot INTEGER NOT NULL,
+                user_msg TEXT,
+                thinking TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (group_id, slot)
+            );
         """)
         await db.commit()
         from lib.config import load_config
@@ -85,6 +94,10 @@ async def init_db():
         await db.execute(
             "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
             ("private_chat_enabled", "1" if config.private_chat_enabled else "0"),
+        )
+        await db.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            ("think_enabled", "1" if config.think_enabled else "0"),
         )
         await db.commit()
     finally:
