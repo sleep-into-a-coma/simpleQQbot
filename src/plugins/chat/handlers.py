@@ -3,7 +3,7 @@ from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Message
 from nonebot.params import CommandArg
 
 from lib.context import clear_history
-from lib.permission import check_permission, set_permission, get_rate_limit_status, get_private_chat_enabled, set_private_chat_enabled, get_think_enabled, set_think_enabled, get_think_history
+from lib.permission import check_permission, set_permission, get_rate_limit_status, get_private_chat_enabled, set_private_chat_enabled, get_think_enabled, set_think_enabled, get_think_history, set_user_name
 from lib.personality import get_personality, bind_personality, get_default_personality
 from . import app_config
 
@@ -64,6 +64,7 @@ async def handle_help(event: MessageEvent):
 /allow-p @某人 - 授权某人私聊 Bot（管理员）
 /ban-p @某人 - 撤销某人私聊权限（管理员）
 /private on/off - 全局私聊开关（管理员）
+/register <名称> - 给自己绑定用户名称（admin 可 @某人 给别人起名）
 /think on/off - 全局思维链开关（管理员）
 /Thistory <1/2/3> - 查看对应槽位的思维链
 /admin - 查看管理面板（管理员）"""
@@ -221,6 +222,35 @@ async def handle_private(event: MessageEvent, args: Message = CommandArg()):
     await set_private_chat_enabled(enabled)
     await private_cmd.finish(f"私聊功能已{'开启' if enabled else '关闭'}。")
 
+
+register_cmd = on_command("register", priority=10)
+
+@register_cmd.handle()
+async def handle_register(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+
+    # Parse message segments: @mention gives target_id, text gives name
+    target_id = None
+    name_parts = []
+    for seg in args:
+        if seg.type == "at":
+            target_id = seg.data.get("qq", "")
+        elif seg.type == "text":
+            name_parts.append(str(seg))
+
+    name = "".join(name_parts).strip()
+
+    if not name:
+        await register_cmd.finish("用法：/register <名称> 或 /register @某人 <名称>")
+
+    if target_id:
+        if user_id not in app_config.admins:
+            await register_cmd.finish("权限不足，只能给自己注册名称。")
+        await set_user_name(target_id, name)
+        await register_cmd.finish(f"已为用户 {target_id} 绑定名称：{name}")
+    else:
+        await set_user_name(user_id, name)
+        await register_cmd.finish(f"已绑定名称：{name}")
 
 think_cmd = on_command("think", priority=10)
 
