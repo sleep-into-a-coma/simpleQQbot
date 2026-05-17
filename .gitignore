@@ -9,3 +9,5 @@ data/logs/
 .pytest_cache/
 .idea/
 .vscode/
+*.db-journal
+*.db-wal
