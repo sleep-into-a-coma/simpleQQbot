@@ -7,3 +7,6 @@ whitelist:
 rate_limit:
   user_per_minute: 10
   group_per_minute: 30
+
+private_chat:
+  enabled: true
