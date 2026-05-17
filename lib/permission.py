@@ -243,3 +243,52 @@ async def get_think_history(group_id: str, slot: int) -> dict | None:
         }
     finally:
         await db.close()
+
+
+async def set_user_name(user_id: str, name: str) -> None:
+    """Bind a name to a user ID."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT OR REPLACE INTO user_names (user_id, name) VALUES (?, ?)",
+            (user_id, name),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def get_user_name(user_id: str) -> str | None:
+    """Get a user's bound name, or None if not registered."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT name FROM user_names WHERE user_id = ?",
+            (user_id,),
+        )
+        row = await cursor.fetchone()
+        return row["name"] if row else None
+    finally:
+        await db.close()
+
+
+async def get_group_user_names(user_ids: list[str]) -> dict[str, str]:
+    """Batch-fetch names for a list of user IDs. Returns {user_id: display_name}."""
+    if not user_ids:
+        return {}
+    db = await get_db()
+    try:
+        placeholders = ",".join("?" * len(user_ids))
+        cursor = await db.execute(
+            f"SELECT user_id, name FROM user_names WHERE user_id IN ({placeholders})",
+            user_ids,
+        )
+        rows = await cursor.fetchall()
+        result = {row["user_id"]: row["name"] for row in rows}
+        # Fill unregistered users with fallback name
+        for uid in user_ids:
+            if uid not in result:
+                result[uid] = f"用户{uid}"
+        return result
+    finally:
+        await db.close()
