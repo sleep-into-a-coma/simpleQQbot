@@ -10,3 +10,5 @@ rate_limit:
 
 private_chat:
   enabled: true
+
+think_enabled: false

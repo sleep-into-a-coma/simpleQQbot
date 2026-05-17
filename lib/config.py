@@ -41,6 +41,7 @@ class AppConfig:
     rate_limit_user_per_minute: int
     rate_limit_group_per_minute: int
     private_chat_enabled: bool
+    think_enabled: bool
 
 
 def _load_models_from_env() -> tuple[str, list[ModelConfig], ModelConfig, bool, int]:
@@ -136,7 +137,7 @@ def _load_personalities() -> tuple[str, list[PersonalityConfig]]:
     return data["default"], personalities
 
 
-def _load_permissions() -> tuple[list[str], list[str], list[str], int, int, bool]:
+def _load_permissions() -> tuple[list[str], list[str], list[str], int, int, bool, bool]:
     with open(CONFIG_DIR / "permissions.yaml", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -147,6 +148,7 @@ def _load_permissions() -> tuple[list[str], list[str], list[str], int, int, bool
         data.get("rate_limit", {}).get("user_per_minute", 10),
         data.get("rate_limit", {}).get("group_per_minute", 30),
         data.get("private_chat", {}).get("enabled", True),
+        data.get("think_enabled", False),
     )
 
 
@@ -154,7 +156,7 @@ def load_config() -> AppConfig:
     """Load all config and return a single AppConfig object."""
     default_model, models, vision_fallback, search_enabled, search_max = _load_models_from_env()
     default_personality, personalities = _load_personalities()
-    admins, wl_users, wl_groups, rl_user, rl_group, pc_enabled = _load_permissions()
+    admins, wl_users, wl_groups, rl_user, rl_group, pc_enabled, think_enabled = _load_permissions()
 
     return AppConfig(
         default_model=default_model,
@@ -170,4 +172,5 @@ def load_config() -> AppConfig:
         rate_limit_user_per_minute=rl_user,
         rate_limit_group_per_minute=rl_group,
         private_chat_enabled=pc_enabled,
+        think_enabled=think_enabled,
     )
