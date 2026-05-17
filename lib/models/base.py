@@ -29,6 +29,7 @@ class ChatMessage:
 @dataclass
 class ChatResponse:
     content: str
+    thinking: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
 
 
