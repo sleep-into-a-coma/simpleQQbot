@@ -114,3 +114,58 @@ def get_rate_limit_status(group_id: str, user_id: str, config: AppConfig) -> dic
         "group_used": group_used,
         "group_limit": config.rate_limit_group_per_minute,
     }
+
+
+async def get_private_chat_enabled() -> bool:
+    """Check if private chat is globally enabled."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT value FROM settings WHERE key = ?",
+            ("private_chat_enabled",),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            from lib.config import load_config
+            return load_config().private_chat_enabled
+        return row["value"] == "1"
+    finally:
+        await db.close()
+
+
+async def set_private_chat_enabled(enabled: bool) -> None:
+    """Set the global private chat toggle."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            ("private_chat_enabled", "1" if enabled else "0"),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def check_private_chat_permission(user_id: str, config: AppConfig) -> tuple[bool, str]:
+    """Check private chat access for a user. Returns (allowed, reason_if_blocked)."""
+    # Global toggle
+    if not await get_private_chat_enabled():
+        return False, "私聊功能已关闭。"
+
+    # Dynamic rules check
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT level FROM permissions WHERE target_type = ? AND target_id = ?",
+            ("private_chat", user_id),
+        )
+        row = await cursor.fetchone()
+        if row and row["level"] == "block":
+            return False, "你已被禁止使用私聊功能。"
+        if row and row["level"] == "allow":
+            return True, ""
+    finally:
+        await db.close()
+
+    # Fall back to existing check_permission (static whitelist logic)
+    return await check_permission("private", user_id, config)
