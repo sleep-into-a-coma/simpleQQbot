@@ -8,7 +8,7 @@ import time
 CQ_PATTERN = re.compile(r'\[CQ:[^\]]+\]')
 
 from lib.context import get_history, save_turn, log_reply
-from lib.permission import check_permission, check_rate_limit
+from lib.permission import check_permission, check_rate_limit, check_private_chat_permission
 from lib.personality import get_personality
 from lib.ai_core import process_message
 from lib.tools.search import format_search_sources
@@ -66,6 +66,12 @@ async def handle_chat(event: MessageEvent):
 
     group_id = str(event.group_id) if isinstance(event, GroupMessageEvent) else "private"
     user_id = str(event.user_id)
+
+    # Step 0: Private chat access check
+    if group_id == "private":
+        allowed, reason = await check_private_chat_permission(user_id, app_config)
+        if not allowed:
+            await chat_handler.finish(reason)
 
     # Step 1: Permission check
     allowed, reason = await check_permission(group_id, user_id, app_config)
