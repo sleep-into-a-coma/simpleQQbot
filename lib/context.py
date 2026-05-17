@@ -5,18 +5,32 @@ MAX_MESSAGES = MAX_HISTORY_ROUNDS * 2  # user + assistant per round
 
 
 async def get_history(group_id: str, user_id: str) -> list[dict]:
-    """Get recent conversation history for a (group, user) pair."""
+    """Get recent conversation history. Group chats return all users; private chats filter by user."""
     db = await get_db()
     try:
-        cursor = await db.execute(
-            """SELECT role, content FROM conversation_memory
-               WHERE group_id = ? AND user_id = ?
-               ORDER BY created_at DESC LIMIT ?""",
-            (group_id, user_id, MAX_MESSAGES),
-        )
+        if group_id == "private":
+            cursor = await db.execute(
+                """SELECT role, content FROM conversation_memory
+                   WHERE group_id = ? AND user_id = ?
+                   ORDER BY created_at DESC LIMIT ?""",
+                (group_id, user_id, MAX_MESSAGES),
+            )
+        else:
+            cursor = await db.execute(
+                """SELECT role, content, user_id FROM conversation_memory
+                   WHERE group_id = ?
+                   ORDER BY created_at DESC LIMIT ?""",
+                (group_id, MAX_MESSAGES),
+            )
         rows = await cursor.fetchall()
-        rows.reverse()  # oldest first for LLM context
-        return [{"role": row["role"], "content": row["content"]} for row in rows]
+        rows.reverse()
+        result = []
+        for row in rows:
+            entry = {"role": row["role"], "content": row["content"]}
+            if group_id != "private" and "user_id" in row.keys():
+                entry["user_id"] = row["user_id"]
+            result.append(entry)
+        return result
     finally:
         await db.close()
 
@@ -42,31 +56,48 @@ async def save_turn(group_id: str, user_id: str, user_msg: str, assistant_msg: s
 
 
 async def _trim_history(group_id: str, user_id: str):
-    """Remove old messages beyond MAX_MESSAGES for a (group, user) pair."""
+    """Remove old messages beyond MAX_MESSAGES for a group or (group, user) pair."""
     db = await get_db()
     try:
-        await db.execute(
-            """DELETE FROM conversation_memory WHERE id IN (
-                SELECT id FROM conversation_memory
-                WHERE group_id = ? AND user_id = ?
-                ORDER BY created_at DESC
-                LIMIT -1 OFFSET ?
-            )""",
-            (group_id, user_id, MAX_MESSAGES),
-        )
+        if group_id == "private":
+            await db.execute(
+                """DELETE FROM conversation_memory WHERE id IN (
+                    SELECT id FROM conversation_memory
+                    WHERE group_id = ? AND user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT -1 OFFSET ?
+                )""",
+                (group_id, user_id, MAX_MESSAGES),
+            )
+        else:
+            await db.execute(
+                """DELETE FROM conversation_memory WHERE id IN (
+                    SELECT id FROM conversation_memory
+                    WHERE group_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT -1 OFFSET ?
+                )""",
+                (group_id, MAX_MESSAGES),
+            )
         await db.commit()
     finally:
         await db.close()
 
 
 async def clear_history(group_id: str, user_id: str):
-    """Clear all conversation history for a (group, user) pair."""
+    """Clear conversation history. Group: clear entire group. Private: clear per-user."""
     db = await get_db()
     try:
-        await db.execute(
-            "DELETE FROM conversation_memory WHERE group_id = ? AND user_id = ?",
-            (group_id, user_id),
-        )
+        if group_id == "private":
+            await db.execute(
+                "DELETE FROM conversation_memory WHERE group_id = ? AND user_id = ?",
+                (group_id, user_id),
+            )
+        else:
+            await db.execute(
+                "DELETE FROM conversation_memory WHERE group_id = ?",
+                (group_id,),
+            )
         await db.commit()
     finally:
         await db.close()
