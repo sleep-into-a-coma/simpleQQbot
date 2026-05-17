@@ -79,6 +79,8 @@ Bot 启动后将通过 OneBot 反向 WebSocket 连接 go-cqhttp。
 | `/allow-p @某人` | 授权某人私聊 Bot（管理员） |
 | `/ban-p @某人` | 撤销某人私聊权限（管理员） |
 | `/private on/off` | 全局私聊开关（管理员） |
+| `/think on/off` | 全局思维链开关（管理员） |
+| `/Thistory <1/2/3>` | 查看对应槽位的思维链 |
 | `/admin` | 查看管理面板（管理员） |
 
 ## 错误码
