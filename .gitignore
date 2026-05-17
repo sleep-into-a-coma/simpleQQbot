@@ -11,3 +11,4 @@ data/logs/
 .vscode/
 *.db-journal
 *.db-wal
+release/
