@@ -36,6 +36,7 @@ async def process_message(
     personality_system_prompt: str,
     model_name: str | None,
     app_config: AppConfig,
+    think_triggered: bool = False,
 ) -> dict:
     """
     Main AI processing pipeline. Handles vision fallback, tool calling loop.
@@ -75,7 +76,7 @@ async def process_message(
     # Tool calling loop
     max_rounds = 5
     for _ in range(max_rounds):
-        response = await client.chat(messages, tools if tools else None)
+        response = await client.chat(messages, tools if tools else None, enable_thinking=think_triggered)
 
         if response.tool_calls:
             messages.append(ChatMessage(
@@ -105,6 +106,7 @@ async def process_message(
             elapsed_ms = int((time.time() - start_time) * 1000)
             return {
                 "content": response.content,
+                "thinking": response.thinking,
                 "model_name": model_config.name,
                 "has_search": has_search,
                 "has_image": has_image,
@@ -116,6 +118,7 @@ async def process_message(
     elapsed_ms = int((time.time() - start_time) * 1000)
     return {
         "content": "处理超时，请重试。",
+        "thinking": "",
         "model_name": model_config.name,
         "has_search": has_search,
         "has_image": has_image,
