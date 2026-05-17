@@ -3,6 +3,7 @@ from lib.config import AppConfig
 from lib.models.base import ChatMessage, ChatResponse, ToolDefinition
 from lib.models.factory import resolve_model, create_client
 from lib.errors import BotException
+from lib.permission import get_group_user_names
 from lib.tools.search import (
     SEARCH_TOOL_DEFINITION,
     execute_search,
@@ -61,11 +62,12 @@ async def process_message(
         has_image = True  # still count as image processing
 
     # Build messages
-    messages = _build_initial_messages(
+    messages = await _build_initial_messages(
         system_prompt=personality_system_prompt,
         history=history,
         user_text=msg_text,
         image_data=img_for_model if client.supports_vision else None,
+        group_id=group_id,
     )
 
     # Build tools list
@@ -127,25 +129,38 @@ async def process_message(
     }
 
 
-def _build_initial_messages(
+async def _build_initial_messages(
     system_prompt: str,
     history: list[dict],
     user_text: str,
     image_data: bytes | None,
+    group_id: str,
 ) -> list[ChatMessage]:
     messages = []
 
     if system_prompt:
         messages.append(ChatMessage(role="system", content=system_prompt))
 
+    # Collect all user_ids from history for batch name lookup (group only)
+    if group_id != "private" and history:
+        user_ids = list(set(h["user_id"] for h in history if "user_id" in h))
+        names = await get_group_user_names(user_ids)
+    else:
+        names = {}
+
     for h in history:
         if h["role"] == "user":
-            content = f"<user_message>\n{h['content']}\n</user_message>"
+            user_id = h.get("user_id", "")
+            if group_id != "private" and user_id:
+                display_name = names.get(user_id, f"用户{user_id}")
+                content = f"<群聊消息>{display_name}说：{h['content']}</群聊消息>"
+            else:
+                content = f"<用户消息>\n{h['content']}\n</用户消息>"
         else:
             content = h["content"]
         messages.append(ChatMessage(role=h["role"], content=content))
 
-    wrapped_text = f"<user_message>\n{user_text}\n</user_message>"
+    wrapped_text = f"<用户消息>\n{user_text}\n</用户消息>"
     user_msg = ChatMessage(role="user", content=wrapped_text)
     if image_data:
         user_msg.image_data = image_data
