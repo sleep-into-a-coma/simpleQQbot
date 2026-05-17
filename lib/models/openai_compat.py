@@ -17,6 +17,7 @@ class OpenAICompatClient(BaseModelClient):
         self,
         messages: list[ChatMessage],
         tools: Optional[list[ToolDefinition]] = None,
+        enable_thinking: bool = False,
     ) -> ChatResponse:
         body = {
             "model": self.model,
@@ -58,6 +59,7 @@ class OpenAICompatClient(BaseModelClient):
 
         choice = data["choices"][0]["message"]
         content = choice.get("content") or ""
+        thinking = choice.get("reasoning_content") or ""
         tool_calls = []
         if "tool_calls" in choice:
             for tc in choice["tool_calls"]:
@@ -67,7 +69,7 @@ class OpenAICompatClient(BaseModelClient):
                     arguments=json.loads(tc["function"]["arguments"]),
                 ))
 
-        return ChatResponse(content=content, tool_calls=tool_calls)
+        return ChatResponse(content=content, thinking=thinking, tool_calls=tool_calls)
 
     def _build_messages(self, messages: list[ChatMessage]) -> list[dict]:
         result = []

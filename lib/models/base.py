@@ -43,6 +43,7 @@ class BaseModelClient(ABC):
         self,
         messages: list[ChatMessage],
         tools: list[ToolDefinition],
+        enable_thinking: bool = False,
     ) -> ChatResponse:
         """Send messages and return response. May include tool calls."""
         ...
