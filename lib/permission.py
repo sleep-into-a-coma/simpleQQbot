@@ -169,3 +169,77 @@ async def check_private_chat_permission(user_id: str, config: AppConfig) -> tupl
 
     # Fall back to existing check_permission (static whitelist logic)
     return await check_permission("private", user_id, config)
+
+
+# Per-group think slot counter (in-memory, reset on restart)
+_think_slot_counter: dict[str, int] = {}
+
+
+async def get_think_enabled() -> bool:
+    """Check if global think toggle is on."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT value FROM settings WHERE key = ?",
+            ("think_enabled",),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            from lib.config import load_config
+            return load_config().think_enabled
+        return row["value"] == "1"
+    finally:
+        await db.close()
+
+
+async def set_think_enabled(enabled: bool) -> None:
+    """Set the global think toggle."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            ("think_enabled", "1" if enabled else "0"),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def save_think_history(group_id: str, user_msg: str, thinking: str) -> int:
+    """Save thinking to per-group slot (1/2/3 cycling). Returns the slot number used."""
+    counter = _think_slot_counter.get(group_id, 0) + 1
+    _think_slot_counter[group_id] = counter
+    slot = ((counter - 1) % 3) + 1
+
+    db = await get_db()
+    try:
+        await db.execute(
+            """INSERT OR REPLACE INTO think_history (group_id, slot, user_msg, thinking, created_at)
+               VALUES (?, ?, ?, ?, datetime('now'))""",
+            (group_id, slot, user_msg, thinking),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return slot
+
+
+async def get_think_history(group_id: str, slot: int) -> dict | None:
+    """Retrieve a thinking entry by group_id and slot number (1/2/3)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT slot, user_msg, thinking, created_at FROM think_history WHERE group_id = ? AND slot = ?",
+            (group_id, slot),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return {
+            "slot": row["slot"],
+            "user_msg": row["user_msg"],
+            "thinking": row["thinking"],
+            "created_at": row["created_at"],
+        }
+    finally:
+        await db.close()
