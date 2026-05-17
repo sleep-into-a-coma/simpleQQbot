@@ -8,7 +8,7 @@ import time
 CQ_PATTERN = re.compile(r'\[CQ:[^\]]+\]')
 
 from lib.context import get_history, save_turn, log_reply
-from lib.permission import check_permission, check_rate_limit, check_private_chat_permission
+from lib.permission import check_permission, check_rate_limit, check_private_chat_permission, get_think_enabled, save_think_history
 from lib.personality import get_personality
 from lib.ai_core import process_message
 from lib.tools.search import format_search_sources
@@ -83,9 +83,20 @@ async def handle_chat(event: MessageEvent):
     if not allowed:
         await chat_handler.finish(reason)
 
+    # Step 2.5: Detect <think> trigger
+    msg_text = user_text
+    THINK_TAG = "<think>"
+    think_triggered = False
+    if msg_text.endswith(THINK_TAG):
+        think_triggered = True
+        msg_text = msg_text[:-len(THINK_TAG)].strip()
+
+    # Resolve think: per-message trigger OR global toggle
+    if not think_triggered:
+        think_triggered = await get_think_enabled()
+
     # Step 3: Check for model prefix trigger (/A /B /C)
     trigger_model = None
-    msg_text = user_text
     for m in app_config.models:
         prefix = f"/{m.name} "
         if user_text.startswith(prefix):
@@ -118,6 +129,7 @@ async def handle_chat(event: MessageEvent):
             personality_system_prompt=personality.system_prompt,
             model_name=resolved_model,
             app_config=app_config,
+            think_triggered=think_triggered,
         )
     except BotException as e:
         await chat_handler.finish(format_error_reply(e))
@@ -138,8 +150,16 @@ async def handle_chat(event: MessageEvent):
         reply=result["content"],
     )
 
+    # Step 11.5: Handle thinking
+    thinking_hint = ""
+    if think_triggered and result.get("thinking"):
+        slot = await save_think_history(group_id, user_text, result["thinking"])
+        thinking_hint = f"\n（输入 /Thistory {slot} 查看本条思维链）"
+
     # Step 12: Build and send reply
     reply_text = CQ_PATTERN.sub('', result["content"])
+    if think_triggered and result.get("thinking"):
+        reply_text = f"{reply_text}\n\n【思维链】\n{result['thinking']}"
     metadata = _format_metadata(
         personality.name,
         result["model_name"],
@@ -148,6 +168,6 @@ async def handle_chat(event: MessageEvent):
         result["response_time_ms"],
     )
     sources = format_search_sources(result["sources"]) if result["has_search"] else ""
-    full_reply = f"{reply_text}\n\n{metadata}{sources}"
+    full_reply = f"{reply_text}\n\n{metadata}{sources}{thinking_hint}"
 
     await chat_handler.finish(full_reply)
