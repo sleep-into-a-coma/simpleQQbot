@@ -16,6 +16,7 @@ class AnthropicClient(BaseModelClient):
         self,
         messages: list[ChatMessage],
         tools: Optional[list[ToolDefinition]] = None,
+        enable_thinking: bool = False,
     ) -> ChatResponse:
         system_prompt = ""
         chat_messages = []
@@ -44,6 +45,10 @@ class AnthropicClient(BaseModelClient):
         if anthropic_tools:
             kwargs["tools"] = anthropic_tools
 
+        if enable_thinking:
+            kwargs["thinking"] = {"type": "enabled", "budget_tokens": 1024}
+            kwargs["max_tokens"] = kwargs.get("max_tokens", 4096) + 1024
+
         try:
             resp = await self.client.messages.create(**kwargs)
         except anthropic.APITimeoutError:
@@ -66,10 +71,13 @@ class AnthropicClient(BaseModelClient):
             raise BotException(E08)
 
         content = ""
+        thinking_text = ""
         tool_calls = []
         for block in resp.content:
             if block.type == "text":
                 content += block.text
+            elif block.type == "thinking":
+                thinking_text += block.thinking
             elif block.type == "tool_use":
                 tool_calls.append(ToolCall(
                     id=block.id,
@@ -77,7 +85,7 @@ class AnthropicClient(BaseModelClient):
                     arguments=block.input,
                 ))
 
-        return ChatResponse(content=content, tool_calls=tool_calls)
+        return ChatResponse(content=content, thinking=thinking_text, tool_calls=tool_calls)
 
     def _build_messages(self, messages: list[ChatMessage]) -> list[dict]:
         result = []
