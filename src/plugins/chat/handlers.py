@@ -3,7 +3,7 @@ from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent, Message
 from nonebot.params import CommandArg
 
 from lib.context import clear_history
-from lib.permission import check_permission, set_permission, get_rate_limit_status
+from lib.permission import check_permission, set_permission, get_rate_limit_status, get_private_chat_enabled, set_private_chat_enabled
 from lib.personality import get_personality, bind_personality, get_default_personality
 from . import app_config
 
@@ -58,7 +58,13 @@ async def handle_help(event: MessageEvent):
 /summarize - 总结当前对话
 /clear - 清除对话记忆
 /allow @某人 - 允许某人使用 Bot（管理员）
-/ban @某人 - 禁止某人使用 Bot（管理员）"""
+/ban @某人 - 禁止某人使用 Bot（管理员）
+/hire <群号> - 授权群使用 Bot（管理员）
+/fire <群号> - 撤销群使用权限（管理员）
+/allow-p @某人 - 授权某人私聊 Bot（管理员）
+/ban-p @某人 - 撤销某人私聊权限（管理员）
+/private on/off - 全局私聊开关（管理员）
+/admin - 查看管理面板（管理员）"""
     await help_cmd.finish(help_text)
 
 
@@ -137,6 +143,131 @@ async def handle_ban(event: MessageEvent, args: Message = CommandArg()):
     target_id = _extract_qq(target)
     await set_permission("user", target_id, "block")
     await ban_cmd.finish(f"已禁止 {target_id} 使用 Bot。")
+
+
+hire_cmd = on_command("hire", priority=10)
+
+@hire_cmd.handle()
+async def handle_hire(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await hire_cmd.finish("权限不足。")
+    target = args.extract_plain_text().strip()
+    if not target:
+        await hire_cmd.finish("用法：/hire <群号>")
+    target_id = target
+    await set_permission("group", target_id, "allow")
+    await hire_cmd.finish(f"已授权群 {target_id} 使用 Bot。")
+
+
+fire_cmd = on_command("fire", priority=10)
+
+@fire_cmd.handle()
+async def handle_fire(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await fire_cmd.finish("权限不足。")
+    target = args.extract_plain_text().strip()
+    if not target:
+        await fire_cmd.finish("用法：/fire <群号>")
+    target_id = target
+    await set_permission("group", target_id, "block")
+    await fire_cmd.finish(f"已禁止群 {target_id} 使用 Bot。")
+
+
+allow_p_cmd = on_command("allow-p", priority=10)
+
+@allow_p_cmd.handle()
+async def handle_allow_p(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await allow_p_cmd.finish("权限不足。")
+    target = args.extract_plain_text().strip()
+    if not target:
+        await allow_p_cmd.finish("用法：/allow-p @某人 或 /allow-p QQ号")
+    target_id = _extract_qq(target)
+    await set_permission("private_chat", target_id, "allow")
+    await allow_p_cmd.finish(f"已授权 {target_id} 私聊使用 Bot。")
+
+
+ban_p_cmd = on_command("ban-p", priority=10)
+
+@ban_p_cmd.handle()
+async def handle_ban_p(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await ban_p_cmd.finish("权限不足。")
+    target = args.extract_plain_text().strip()
+    if not target:
+        await ban_p_cmd.finish("用法：/ban-p @某人 或 /ban-p QQ号")
+    target_id = _extract_qq(target)
+    await set_permission("private_chat", target_id, "block")
+    await ban_p_cmd.finish(f"已禁止 {target_id} 私聊使用 Bot。")
+
+
+private_cmd = on_command("private", priority=10)
+
+@private_cmd.handle()
+async def handle_private(event: MessageEvent, args: Message = CommandArg()):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await private_cmd.finish("权限不足。")
+    action = args.extract_plain_text().strip()
+    if action not in ("on", "off"):
+        await private_cmd.finish("用法：/private on 或 /private off")
+    enabled = action == "on"
+    await set_private_chat_enabled(enabled)
+    await private_cmd.finish(f"私聊功能已{'开启' if enabled else '关闭'}。")
+
+
+admin_cmd = on_command("admin", priority=10)
+
+@admin_cmd.handle()
+async def handle_admin(event: MessageEvent):
+    user_id = str(event.user_id)
+    if user_id not in app_config.admins:
+        await admin_cmd.finish("权限不足。")
+
+    from lib.db import get_db
+
+    lines = ["=== Bot 管理面板 ===", ""]
+
+    # Static config
+    lines.append("【静态白名单 (yaml)】")
+    lines.append(f"  管理员: {', '.join(app_config.admins) if app_config.admins else '未配置'}")
+    lines.append(f"  白名单用户: {', '.join(app_config.whitelist_users) if app_config.whitelist_users else '未限制'}")
+    lines.append(f"  白名单群: {', '.join(app_config.whitelist_groups) if app_config.whitelist_groups else '未限制'}")
+    lines.append("")
+
+    # Dynamic permissions
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT target_type, target_id, level FROM permissions ORDER BY target_type, target_id")
+        rows = await cursor.fetchall()
+        lines.append("【动态权限 (DB)】")
+        if rows:
+            for row in rows:
+                type_label = {"user": "用户", "group": "群", "private_chat": "私聊"}.get(row["target_type"], row["target_type"])
+                level_label = "允许" if row["level"] == "allow" else "禁止"
+                lines.append(f"  [{type_label}] {row['target_id']} → {level_label}")
+        else:
+            lines.append("  无")
+    finally:
+        await db.close()
+
+    lines.append("")
+
+    # Private chat toggle
+    pc_enabled = await get_private_chat_enabled()
+    lines.append(f"【私聊开关】: {'开启' if pc_enabled else '关闭'}")
+    lines.append("")
+
+    # Rate limits
+    lines.append("【频率限制】")
+    lines.append(f"  用户: {app_config.rate_limit_user_per_minute}/分钟")
+    lines.append(f"  群: {app_config.rate_limit_group_per_minute}/分钟")
+
+    await admin_cmd.finish("\n".join(lines))
 
 
 clear_cmd = on_command("clear", priority=10)
