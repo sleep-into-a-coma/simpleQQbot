@@ -186,135 +186,88 @@ python bot.py
 
 ---
 
-## Linux 部署（从零开始）
+## Linux 部署（一键脚本）
 
-> 以 Ubuntu 22.04/24.04 为例。Debian 同理。CentOS 把 `apt` 换成 `yum`。
+> 以 Ubuntu 22.04/24.04 为例。Debian、CentOS 8+ 同理。
 
-### 第 1 步：安装 Python 3.11+
-
-```bash
-sudo apt update
-sudo apt install python3 python3-venv python3-pip git -y
-```
-
-验证：
-
-```bash
-python3 --version
-```
-
-显示 `Python 3.11.x` 或更高 → 成功。如果不是 3.11+，需要加 deadsnakes PPA：
-
-```bash
-sudo apt install software-properties-common -y
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-sudo apt update
-sudo apt install python3.11 python3.11-venv -y
-```
-
-### 第 2 步：下载项目
+### 方式一：一键安装脚本（推荐）
 
 ```bash
 git clone https://github.com/sleep-into-a-coma/simpleQQbot.git
 cd simpleQQbot
+bash scripts/install.sh
 ```
 
-### 第 3 步：创建虚拟环境
+脚本会自动完成：安装系统依赖 → 创建 venv → 交互式配置 .env → 下载 NapCat → 配置反向 WebSocket → 安装 systemd 服务 → 启动。
+
+启动后查看日志扫码登录：
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+sudo journalctl -u napcat -f
+# 终端会输出二维码链接，浏览器打开，QQ 小号扫码
 ```
 
-激活后左边出现 `(.venv)`。**以后每次 SSH 进来操作都要 `source .venv/bin/activate`。**
-
-### 第 4 步：安装依赖
+扫码完成后 QQ 小号登录状态持久化到 `~/napcat/`，重启无需重新扫码。
 
 ```bash
-pip install -e .
+# 常用命令
+sudo systemctl status qqbot          # 查看 Bot 状态
+sudo systemctl status napcat         # 查看 NapCat 状态
+sudo journalctl -u qqbot -f          # 实时 Bot 日志
+sudo journalctl -u napcat -f         # 实时 NapCat 日志
+sudo systemctl restart qqbot         # 重启 Bot
+sudo systemctl stop qqbot napcat     # 停止
+
+# 卸载
+sudo systemctl disable --now qqbot napcat
+sudo rm /etc/systemd/system/qqbot.service /etc/systemd/system/napcat.service
 ```
 
-### 第 5 步：配置 .env
+### 方式二：Docker 部署
 
 ```bash
+git clone https://github.com/sleep-into-a-coma/simpleQQbot.git
+cd simpleQQbot
+
+# 编辑 .env 配置模型（参考下方"完整配置"章节）
 cp .env.example .env
 nano .env
-```
 
-至少填 `MODEL_A_NAME`、`MODEL_A_PROVIDER`、`MODEL_A_API_BASE`、`MODEL_A_API_KEY`、`VISION_FALLBACK_*`。（参考上方 Windows 第 5 步的说明）
-
-`Ctrl+O` 保存，`Ctrl+X` 退出。
-
-### 第 6 步：配置权限
-
-```bash
+# 配置权限
 nano config/permissions.yaml
+
+# 一键启动
+docker compose up -d
 ```
 
-把你的 QQ 号填入 `admins` 列表（参考上方 Windows 第 6 步）。
-
-### 第 7 步：安装 OneBot 客户端（Lagrange）
+启动后扫码登录：
 
 ```bash
-# 下载 Lagrange（替换为最新版本号）
-wget https://github.com/LagrangeDev/Lagrange.Core/releases/latest/download/Lagrange.OneBot-linux-x64.tar.gz
-mkdir lagrange && tar -xzf Lagrange.OneBot-linux-x64.tar.gz -C lagrange
-cd lagrange
+docker compose logs napcat
+# 终端会输出二维码链接，浏览器打开，QQ 小号扫码
+# 或访问 http://localhost:6099 打开 WebUI 管理面板
 ```
 
-编辑 `appsettings.json`：
+常用命令：
 
 ```bash
-nano appsettings.json
+docker compose ps                    # 查看服务状态
+docker compose logs -f bot           # 实时 Bot 日志
+docker compose logs -f napcat        # 实时 NapCat 日志
+docker compose restart               # 重启所有服务
+docker compose down                  # 停止并删除容器
 ```
 
-填入：
+QQ 登录会话保存在 `./napcat/QQ` 目录，`docker compose down` 不会删除。
 
-```json
-{
-    "Implementations": [
-        {
-            "Type": "ReverseWebSocket",
-            "Host": "127.0.0.1",
-            "Port": 8989,
-            "Suffix": "/onebot/v11/ws",
-            "HeartBeatInterval": 5000,
-            "AccessToken": ""
-        }
-    ]
-}
-```
+### 方式三：手动安装（高级）
 
-### 第 8 步：启动（使用 screen）
+如果需要手动控制每个组件，参考旧版 README 步骤或以下要点：
 
-> `screen` 让你关掉 SSH 后程序继续跑。没有就装：`sudo apt install screen -y`
-
-开两个 screen 窗口：
-
-**窗口 1 — OneBot 客户端：**
-
-```bash
-screen -S lagrange
-cd ~/simpleQQbot/lagrange
-chmod +x ./Lagrange.OneBot
-./Lagrange.OneBot
-```
-
-看到二维码链接后用手机 QQ 小号扫码登录。然后 `Ctrl+A D` 分离。
-
-**窗口 2 — Bot：**
-
-```bash
-screen -S bot
-cd ~/simpleQQbot
-source .venv/bin/activate
-python bot.py
-```
-
-`Ctrl+A D` 分离。
-
-> **恢复查看：** `screen -r lagrange` 或 `screen -r bot`
-> **完全退出 screen：** 在 screen 内 `Ctrl+C` 停掉程序，再输入 `exit`
+1. 安装 Python 3.11+ + 创建 venv + `pip install -e .`
+2. 配置 `.env` 和 `config/permissions.yaml`
+3. 安装 OneBot 客户端（NapCat/Lagrange），配置反向 WS 连接 `ws://127.0.0.1:8989/onebot/v11/ws`
+4. 运行 `python bot.py`
 
 ---
 
@@ -496,29 +449,7 @@ personalities:
 
 ### Linux 后台运行怎么搞？
 
-推荐 `screen` 或 `tmux`（教程见部署步骤）。进阶可以用 `systemd` 守护：
-
-```ini
-# /etc/systemd/system/qqbot.service
-[Unit]
-Description=QQBot AI
-After=network.target
-
-[Service]
-Type=simple
-User=你的用户名
-WorkingDirectory=/home/你的用户名/simpleQQbot
-ExecStart=/home/你的用户名/simpleQQbot/.venv/bin/python bot.py
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now qqbot
-```
+推荐一键脚本 `bash scripts/install.sh` 或 Docker 部署，见上方 Linux 部署章节。
 
 ---
 
