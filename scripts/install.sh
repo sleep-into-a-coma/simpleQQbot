@@ -50,7 +50,7 @@ install_system_deps() {
         sudo apt update
         sudo apt install -y python3 python3-venv python3-pip git wget curl screen
     else
-        sudo yum install -y python3 python3-pip git wget curl screen
+        sudo yum install -y python3 python3-venv python3-pip git wget curl screen
     fi
     log_info "系统依赖安装完成"
 }
@@ -173,7 +173,7 @@ CONFEOF
 install_services() {
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
     PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-    PYTHON_BIN="$(pwd)/.venv/bin/python"
+    PYTHON_BIN="${PROJECT_DIR}/.venv/bin/python"
     CURRENT_USER=$(whoami)
 
     # === qqbot.service ===
