@@ -15,11 +15,11 @@ services:
       - WSR_ENABLE=true
       - WS_URLS=["ws://bot:8989/onebot/v11/ws"]
       - MESSAGE_POST_FORMAT=array
-      - WEBUI_TOKEN=napcat
+      - WEBUI_TOKEN=${WEBUI_TOKEN:-napcat}
       - NAPCAT_UID=0
       - NAPCAT_GID=0
     ports:
-      - "6099:6099"
+      - "127.0.0.1:6099:6099"
     volumes:
       - ./napcat/QQ:/app/.config/QQ
       - ./napcat/config:/app/napcat/config
