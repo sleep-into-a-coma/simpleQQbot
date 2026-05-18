@@ -31,7 +31,13 @@ detect_os() {
 
     case "$OS" in
         ubuntu|debian) PKG_MGR="apt";;
-        centos|rhel|fedora) PKG_MGR="yum";;
+        centos|rhel|fedora)
+            if command -v dnf &>/dev/null; then
+                PKG_MGR="dnf"
+            else
+                PKG_MGR="yum"
+            fi
+            ;;
         *)
             log_error "不支持的操作系统: $OS"
             log_error "支持: Ubuntu 22.04+, Debian 12+, CentOS 8+"
@@ -48,9 +54,9 @@ install_system_deps() {
     log_info "安装系统依赖..."
     if [ "$PKG_MGR" = "apt" ]; then
         sudo apt update
-        sudo apt install -y python3 python3-venv python3-pip git wget curl screen
+        sudo apt install -y python3 python3-venv python3-pip git wget curl
     else
-        sudo yum install -y python3 python3-venv python3-pip git wget curl screen
+        sudo $PKG_MGR install -y python3 python3-venv python3-pip git wget curl
     fi
     log_info "系统依赖安装完成"
 }
@@ -93,6 +99,7 @@ MODEL_${default_model}_VISION=false
 SEARCH_ENABLED=true
 SEARCH_MAX_RESULTS=5
 ONEBOT_WS_PORT=8989
+PORT=8989
 ENVEOF
     log_info ".env 已生成，其他模型可稍后手动编辑"
 }
@@ -143,12 +150,22 @@ configure_napcat() {
     NAPCAT_CONFIG_DIR="$HOME/napcat/config"
     mkdir -p "$NAPCAT_CONFIG_DIR"
 
+    # Check for existing config
+    EXISTING=$(ls "$NAPCAT_CONFIG_DIR"/onebot11_*.json 2>/dev/null | head -1)
+    if [ -n "$EXISTING" ]; then
+        log_info "NapCat 配置已存在: $EXISTING，跳过"
+        return
+    fi
+
     read -p "请输入机器人QQ号: " qq_number
     if [ -z "$qq_number" ]; then
         log_error "QQ号不能为空"
         exit 1
     fi
 
+    if [ -f ".env" ]; then
+        set -a; source .env; set +a
+    fi
     PORT="${ONEBOT_WS_PORT:-8989}"
     CONFIG_FILE="$NAPCAT_CONFIG_DIR/onebot11_${qq_number}.json"
 
@@ -171,8 +188,6 @@ CONFEOF
 # 6. 安装systemd服务
 # ============================================================
 install_services() {
-    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
     PYTHON_BIN="${PROJECT_DIR}/.venv/bin/python"
     CURRENT_USER=$(whoami)
 
@@ -266,6 +281,10 @@ start_services() {
 # 主流程
 # ============================================================
 main() {
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+    cd "$PROJECT_DIR"
+
     echo ""
     echo "========================================"
     echo "  QQBot AI + NapCat 一键安装"
