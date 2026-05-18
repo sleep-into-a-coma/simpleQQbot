@@ -1,8 +1,35 @@
 services:
-  qqbot:
+  bot:
     build: .
     volumes:
       - ./config:/app/config:ro
       - ./data:/app/data
       - ./.env:/app/.env:ro
+    networks:
+      - qqbot-net
     restart: unless-stopped
+
+  napcat:
+    image: mlikiowa/napcat-docker:latest
+    environment:
+      - WSR_ENABLE=true
+      - WS_URLS=["ws://bot:8989/onebot/v11/ws"]
+      - MESSAGE_POST_FORMAT=array
+      - WEBUI_TOKEN=napcat
+      - NAPCAT_UID=0
+      - NAPCAT_GID=0
+    ports:
+      - "6099:6099"
+    volumes:
+      - ./napcat/QQ:/app/.config/QQ
+      - ./napcat/config:/app/napcat/config
+    networks:
+      - qqbot-net
+    depends_on:
+      bot:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  qqbot-net:
+    driver: bridge
