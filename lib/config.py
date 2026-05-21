@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
@@ -42,11 +43,10 @@ class AppConfig:
     rate_limit_group_per_minute: int
     private_chat_enabled: bool
     think_enabled: bool
+    proxy_url: Optional[str] = None
 
 
 def _load_models_from_env() -> tuple[str, list[ModelConfig], ModelConfig, bool, int]:
-    import os
-
     # Discover model IDs from MODEL_*_NAME env vars
     model_ids = set()
     for key in os.environ:
@@ -158,6 +158,8 @@ def load_config() -> AppConfig:
     default_personality, personalities = _load_personalities()
     admins, wl_users, wl_groups, rl_user, rl_group, pc_enabled, think_enabled = _load_permissions()
 
+    proxy_url = os.getenv("PROXY_URL") or None
+
     return AppConfig(
         default_model=default_model,
         models=models,
@@ -173,4 +175,5 @@ def load_config() -> AppConfig:
         rate_limit_group_per_minute=rl_group,
         private_chat_enabled=pc_enabled,
         think_enabled=think_enabled,
+        proxy_url=proxy_url,
     )

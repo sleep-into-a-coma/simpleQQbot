@@ -8,8 +8,8 @@ from lib.config import ModelConfig, AppConfig
 _client_cache: dict[tuple, BaseModelClient] = {}
 
 
-def create_client(config: ModelConfig) -> BaseModelClient:
-    cache_key = (config.provider, config.model, config.api_key, config.api_base)
+def create_client(config: ModelConfig, proxy_url: str | None = None) -> BaseModelClient:
+    cache_key = (config.provider, config.model, config.api_key, config.api_base, proxy_url)
     cached = _client_cache.get(cache_key)
     if cached is not None:
         return cached
@@ -24,12 +24,14 @@ def create_client(config: ModelConfig) -> BaseModelClient:
             api_key=api_key,
             model=config.model,
             supports_vision=config.supports_vision,
+            proxy_url=proxy_url,
         )
     elif config.provider == "anthropic":
         client = AnthropicClient(
             api_key=api_key,
             model=config.model,
             supports_vision=config.supports_vision,
+            proxy_url=proxy_url,
         )
     else:
         raise ValueError(f"Unknown provider: {config.provider}")
@@ -43,5 +45,5 @@ def resolve_model(app_config: AppConfig, model_name: str | None = None) -> tuple
     name = model_name or app_config.default_model
     for m in app_config.models:
         if m.name == name:
-            return m, create_client(m)
+            return m, create_client(m, proxy_url=app_config.proxy_url)
     raise ValueError(f"Model not found: {name}")
