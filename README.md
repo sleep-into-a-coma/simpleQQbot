@@ -268,3 +268,7 @@ source .venv/bin/activate   # Linux
 pip install -e .[dev]
 python bot.py
 ```
+
+## 许可证
+
+本仓库代码仅供个人使用、学习研究、非商业用途。商业用途请联系作者授权。
