@@ -339,4 +339,4 @@ main() {
     start_services
 }
 
-main
+main "$@"
