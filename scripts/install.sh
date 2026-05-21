@@ -70,7 +70,12 @@ setup_venv() {
         python3 -m venv .venv
     fi
     source .venv/bin/activate
-    pip install -e .
+    if $OFFLINE && [ -d "wheels" ]; then
+        log_info "离线模式：从 wheels/ 安装依赖..."
+        pip install --no-index --find-links=wheels/ -e .
+    else
+        pip install -e .
+    fi
     log_info "Python依赖安装完成"
 }
 
@@ -111,6 +116,30 @@ install_napcat() {
     NAPCAT_DIR="$HOME/napcat"
     if [ -d "$NAPCAT_DIR" ] && [ -f "$NAPCAT_DIR/napcat" ]; then
         log_info "NapCat 已安装，跳过"
+        return
+    fi
+
+    if $OFFLINE; then
+        log_info "离线模式：从本地安装 NapCat..."
+        ARCH=$(uname -m)
+        case "$ARCH" in
+            x86_64)  NAPCAT_ARCH="amd64";;
+            aarch64) NAPCAT_ARCH="arm64";;
+            *)
+                log_error "不支持的CPU架构: $ARCH"
+                exit 1
+                ;;
+        esac
+        NAPCAT_TARBALL="napcat/napcat-linux-${NAPCAT_ARCH}.tar.gz"
+        if [ ! -f "$NAPCAT_TARBALL" ]; then
+            log_error "未找到 $NAPCAT_TARBALL，离线安装失败"
+            log_error "请确保完整包已正确解压"
+            exit 1
+        fi
+        mkdir -p "$NAPCAT_DIR"
+        tar -xzf "$NAPCAT_TARBALL" -C "$NAPCAT_DIR"
+        chmod +x "$NAPCAT_DIR/napcat"
+        log_info "NapCat 安装完成: $NAPCAT_DIR"
         return
     fi
 
@@ -285,14 +314,23 @@ main() {
     PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
     cd "$PROJECT_DIR"
 
+    OFFLINE=false
+    if [ "${1:-}" = "--offline" ]; then
+        OFFLINE=true
+    fi
+
     echo ""
     echo "========================================"
     echo "  QQBot AI + NapCat 一键安装"
     echo "========================================"
     echo ""
 
-    detect_os
-    install_system_deps
+    if $OFFLINE; then
+        log_info "离线模式：跳过系统依赖安装（请确保 python3 已安装）"
+    else
+        detect_os
+        install_system_deps
+    fi
     setup_venv
     setup_env
     install_napcat
