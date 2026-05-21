@@ -15,259 +15,50 @@
 - **用户命名** — `/register 名字` 让 AI 用名字称呼你
 - **错误反馈** — API 异常返回中文错误码 + 原因 + 建议
 
----
+## 快速开始
 
-## 环境要求
+### Windows
 
-| 项目 | 要求 |
-|------|------|
-| Python | `>= 3.11`（3.11 / 3.12 / 3.13 均可） |
-| QQ 客户端 | 任意 OneBot v11 兼容客户端，例如 [Lagrange](https://github.com/LagrangeDev/Lagrange.Core)、[NapCat](https://github.com/NapNeko/NapCatQQ)、[LLOneBot](https://github.com/LLOneBot/LLOneBot) |
-| 网络 | 能访问所选 AI 模型的 API 地址 |
-| 操作系统 | Windows 10+ / Linux（Ubuntu/Debian/CentOS） |
+1. 下载 [qqbot-windows-light.zip](https://github.com/sleep-into-a-coma/simpleQQbot/releases) 或 [qqbot-windows-full.zip](https://github.com/sleep-into-a-coma/simpleQQbot/releases)
+2. 解压到任意目录
+3. 复制 `.env.example` 为 `.env`，填写 API Key
+4. 双击 `start.bat`
 
-> **什么是 OneBot？** QQ 官方不允许机器人直接登录，OneBot 是一个协议标准，它让第三方客户端模拟 QQ 登录，把你的 Bot 程序连接到 QQ。你只需要装一个 OneBot 客户端（如 Lagrange），用你的 QQ 小号扫码登录，Bot 就能收发消息。
+> **自包含包 (full)** 内嵌 Python 和 NapCat，无需预装任何软件。**轻量包 (light)** 需自行安装 Python 3.11+ 和 NapCat。
 
----
+### Linux
 
-## Windows 部署（从零开始）
+```bash
+# 轻量包（需联网）
+tar -xzf qqbot-linux-light.tar.gz
+cd qqbot
+bash install.sh
 
-> 以下每一步都有截图级别的详细说明。**不要跳步。**
-
-### 第 1 步：安装 Python
-
-1. 浏览器打开 https://www.python.org/downloads/
-2. 点击黄色大按钮下载最新 Python 3.11+ 安装包
-3. **关键：** 运行安装包，**第一屏勾选底部的 "Add Python to PATH"**（必须勾，不然后面所有命令都会报"找不到 python"）
-4. 点击 "Install Now"，等待完成
-5. 验证：按 `Win+R`，输入 `cmd` 回车，在黑窗口输入：
-
-```
-python --version
+# 自包含包（可离线）
+tar -xzf qqbot-linux-full.tar.gz
+cd qqbot
+bash install.sh --offline
 ```
 
-如果显示 `Python 3.11.x` 或更高版本号 → 成功。如果显示"不是内部命令"→ 第 3 步没勾 Add to PATH，重装。
-
-### 第 2 步：下载项目
-
-1. 打开项目 GitHub 页面
-2. 点击绿色 "Code" 按钮 → "Download ZIP"
-3. 把 ZIP 解压到一个你不会搞丢的目录，例如 `D:\qqbot`
-4. 解压后你会看到 `bot.py`、`pyproject.toml`、`config` 文件夹等
-5. 打开文件资源管理器，在地址栏输入 `cmd` 回车 — 会在当前目录打开命令行
-
-### 第 3 步：创建虚拟环境
-
-> 虚拟环境把 Python 依赖装在这个项目文件夹里，不影响系统其他程序。
-
-在刚刚打开的 cmd 窗口中逐条执行：
-
-```
-python -m venv .venv
-```
-
-等它完成（无输出就是正常），然后激活：
-
-```
-.venv\Scripts\activate
-```
-
-激活成功后，命令行的最左边会出现 `(.venv)` 字样。**之后每次重新打开 cmd 操作项目，都要先执行上面这行激活命令。**
-
-### 第 4 步：安装依赖
-
-```
-pip install -e .
-```
-
-> 如果报错 `pip 不是内部命令` → 虚拟环境没激活，回到第 3 步激活。
-> 如果报 `Microsoft Visual C++ 14.0 is required` → 去 https://visualstudio.microsoft.com/visual-cpp-build-tools/ 下载 Build Tools，安装时勾选" C++ 生成工具"，装完重试。
-
-等它跑完（一堆下载进度条），出现 `Successfully installed` 即成功。
-
-### 第 5 步：配置 .env
-
-```
-copy .env.example .env
-```
-
-然后用记事本打开 `.env`，**至少**填下面几项（每行一个 `= 号后贴你的真实值`）：
-
-```ini
-# 必填：模型 A（你的主力模型）
-DEFAULT_MODEL=A
-MODEL_A_NAME=deepseek-chat
-MODEL_A_PROVIDER=openai_compat
-MODEL_A_API_BASE=https://api.deepseek.com/v1
-MODEL_A_API_KEY=sk-你的真实key
-
-# 必填：Vision 降级模型（不想配也随便填一个）
-VISION_FALLBACK_NAME=gpt-4o-mini
-VISION_FALLBACK_PROVIDER=openai_compat
-VISION_FALLBACK_API_BASE=https://api.openai.com/v1
-VISION_FALLBACK_API_KEY=sk-你的真实key
-```
-
-**什么是 API Key？** 你去 AI 服务商的网站（DeepSeek、OpenAI 等）注册账号，在控制台/API 管理页面会给你一个 `sk-` 开头的密钥。把这个密钥填到 `MODEL_A_API_KEY=` 后面。
-
-> **怎么获得 DeepSeek API Key？** 打开 https://platform.deepseek.com → 注册登录 → 顶部导航"API Keys"→ 创建新 Key → 复制。
-
-**什么是 API Base？** API 的网址入口。常见服务商：
-
-| 服务商 | API Base |
-|--------|----------|
-| DeepSeek | `https://api.deepseek.com/v1` |
-| OpenAI | `https://api.openai.com/v1` |
-| 硅基流动 | `https://api.siliconflow.cn/v1` |
-| 阿里百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-
-### 第 6 步：配置权限
-
-用记事本打开 `config\permissions.yaml`：
-
-```yaml
-admins:
-  - "你的QQ号"       # ← 填你的 QQ 号（字符串，加引号）
-
-whitelist:
-  users: []           # 留空 = 不限制谁能用
-  groups: []           # 留空 = 不限制哪个群能用
-```
-
-**管理员 QQ 号填了才能用管理指令。**
-
-### 第 7 步：启动 OneBot 客户端
-
-以 Lagrange 为例：
-
-1. 从 https://github.com/LagrangeDev/Lagrange.Core/releases 下载最新 `Lagrange.OneBot.exe`
-2. 双击运行，会生成 `appsettings.json`
-3. 关闭它，用记事本打开 `appsettings.json`，找到这部分，改成：
-
-```json
-{
-    "Implementations": [
-        {
-            "Type": "ReverseWebSocket",
-            "Host": "127.0.0.1",
-            "Port": 8989,
-            "Suffix": "/onebot/v11/ws",
-            "HeartBeatInterval": 5000,
-            "AccessToken": ""
-        }
-    ]
-}
-```
-
-> **关键：** `Port` 必须是 `8989`，`Suffix` 必须是 `/onebot/v11/ws`，和 Bot 的默认配置一致。
-
-4. 保存，重新双击 `Lagrange.OneBot.exe`
-5. 终端会显示一个二维码链接，复制链接用浏览器打开，用**你的 QQ 小号**扫码登录
-6. 看到 `Bot Online` 或 `Connected` 即成功
-
-### 第 8 步：启动 Bot
-
-回到项目目录的 cmd（确保 `(.venv)` 在左边）：
-
-```
-python bot.py
-```
-
-看到类似输出即成功：
-
-```
-[INFO] nonebot | Running NoneBot...
-[INFO] nonebot | Loaded adapters: OneBot V11
-```
-
-### 第 9 步：测试
-
-用另一个 QQ 号（不是 Bot 登录的那个号）在群里或私聊 Bot 发一条消息，Bot 回复了 → 部署完成。
-
----
-
-## Linux 部署（一键脚本）
-
-> 以 Ubuntu 22.04/24.04 为例。Debian、CentOS 8+ 同理。
-
-### 方式一：一键安装脚本（推荐）
+### Docker
 
 ```bash
 git clone https://github.com/sleep-into-a-coma/simpleQQbot.git
 cd simpleQQbot
-bash scripts/install.sh
-```
-
-脚本会自动完成：安装系统依赖 → 创建 venv → 交互式配置 .env → 下载 NapCat → 配置反向 WebSocket → 安装 systemd 服务 → 启动。
-
-启动后查看日志扫码登录：
-
-```bash
-sudo journalctl -u napcat -f
-# 终端会输出二维码链接，浏览器打开，QQ 小号扫码
-```
-
-扫码完成后 QQ 小号登录状态持久化到 `~/napcat/`，重启无需重新扫码。
-
-```bash
-# 常用命令
-sudo systemctl status qqbot          # 查看 Bot 状态
-sudo systemctl status napcat         # 查看 NapCat 状态
-sudo journalctl -u qqbot -f          # 实时 Bot 日志
-sudo journalctl -u napcat -f         # 实时 NapCat 日志
-sudo systemctl restart qqbot         # 重启 Bot
-sudo systemctl stop qqbot napcat     # 停止
-
-# 卸载
-sudo systemctl disable --now qqbot napcat
-sudo rm /etc/systemd/system/qqbot.service /etc/systemd/system/napcat.service
-```
-
-### 方式二：Docker 部署
-
-```bash
-git clone https://github.com/sleep-into-a-coma/simpleQQbot.git
-cd simpleQQbot
-
-# 编辑 .env 配置模型（参考下方"完整配置"章节）
-cp .env.example .env
-nano .env
-
-# 配置权限
-nano config/permissions.yaml
-
-# 一键启动
+cp .env.example .env && nano .env
 docker compose up -d
 ```
 
-启动后扫码登录：
+## 选择哪个包？
 
-```bash
-docker compose logs napcat
-# 终端会输出二维码链接，浏览器打开，QQ 小号扫码
-# 或访问 http://localhost:6099 打开 WebUI 管理面板
-```
-
-常用命令：
-
-```bash
-docker compose ps                    # 查看服务状态
-docker compose logs -f bot           # 实时 Bot 日志
-docker compose logs -f napcat        # 实时 NapCat 日志
-docker compose restart               # 重启所有服务
-docker compose down                  # 停止并删除容器
-```
-
-QQ 登录会话保存在 `./napcat/QQ` 目录，`docker compose down` 不会删除。
-
-### 方式三：手动安装（高级）
-
-如果需要手动控制每个组件，参考旧版 README 步骤或以下要点：
-
-1. 安装 Python 3.11+ + 创建 venv + `pip install -e .`
-2. 配置 `.env` 和 `config/permissions.yaml`
-3. 安装 OneBot 客户端（NapCat/Lagrange），配置反向 WS 连接 `ws://127.0.0.1:8989/onebot/v11/ws`
-4. 运行 `python bot.py`
+| 场景 | 推荐 |
+|------|------|
+| Windows，想最快启动 | `windows-full` |
+| Windows，已有 Python，想最小下载 | `windows-light` |
+| Linux，服务器有网 | `linux-light` |
+| Linux，离线/内网环境 | `linux-full` |
+| 想容器化运行 | Docker Compose |
+| 开发者/想改源码 | git clone 手动安装 |
 
 ---
 
@@ -428,63 +219,52 @@ personalities:
 
 ## 常见问题
 
+### start.bat 闪退？
+右键点击 `start.bat` → 编辑，在最后一行前加 `pause`，保存后重新双击，看错误信息。
+
+### "未检测到 Python"
+你下载的是轻量包，需要装 Python。去 https://www.python.org/downloads/ 下载，安装时勾选 "Add Python to PATH"。或者改用自包含包。
+
 ### Bot 启动了但收不到消息？
-
-1. 确认 OneBot 客户端和 Bot **同时**在运行
-2. 确认 OneBot 客户端 `appsettings.json` 的 Port 是 `8989`，Suffix 是 `/onebot/v11/ws`
-3. 确认 OneBot 客户端已扫码登录且在线
-4. Windows 防火墙可能拦截，尝试临时关闭防火墙测试
-
-### 私聊 Bot 没反应？
-
-1. 检查 `private_chat.enabled` 是否为 `true`
-2. 检查是否有 `/ban-p` 禁止了你
-3. 检查白名单是否限制了你
+1. 确认 NapCat 已扫码登录且在线
+2. 确认 NapCat 配置的反向 WebSocket 地址是 `ws://127.0.0.1:8989/onebot/v11/ws`
 
 ### 怎么换 QQ 号登录？
+删除 NapCat 的会话文件后重启：
+- Windows: 删除 `napcat/` 目录下 QQ 号对应的文件夹
+- Linux: 删除 `~/napcat/` 下 QQ 号对应的文件夹
 
-1. 停掉 OneBot 客户端
-2. 删除 Lagrange 目录下的 `keystore.json` 或会话文件
-3. 重启 OneBot 客户端，用新号扫码
-
-### Linux 后台运行怎么搞？
-
-推荐一键脚本 `bash scripts/install.sh` 或 Docker 部署，见上方 Linux 部署章节。
+### API 调用报错 E02/E05？
+- E02: API Key 错误，检查 `.env` 中填的 Key
+- E05: 网络不通。如果在国内使用 OpenAI/Anthropic，需要配代理（在 `.env` 中设 `PROXY_URL=http://127.0.0.1:7890`）
 
 ---
 
 ## 项目结构
 
 ```
-simpleQQbot/
-├── bot.py                  # 入口文件，python bot.py 启动
-├── pyproject.toml          # 项目元数据和依赖声明
-├── .env.example            # 环境变量模板（复制为 .env 后编辑）
-├── config/
-│   ├── personalities.yaml  # 人格定义（增删改都在这里）
-│   └── permissions.yaml    # 管理员、白名单、私聊开关、思维链开关
-├── lib/
-│   ├── ai_core.py          # AI 处理主流程（消息构建+工具调用）
-│   ├── config.py           # 配置加载（读 yaml + env）
-│   ├── context.py          # 对话记忆存取
-│   ├── db.py               # SQLite 建表
-│   ├── errors.py           # 错误码与异常
-│   ├── model_binding.py    # 模型绑定（按群/用户）
-│   ├── permission.py       # 权限、频率控制、思维链、用户命名
-│   ├── personality.py      # 人格解析与绑定
-│   ├── models/
-│   │   ├── base.py         # 抽象基类（ChatMessage/ChatResponse）
-│   │   ├── factory.py      # 客户端工厂+缓存
-│   │   ├── openai_compat.py # OpenAI 兼容协议
-│   │   └── anthropic.py    # Anthropic 协议
-│   └── tools/
-│       └── search.py       # DuckDuckGo 联网搜索
-├── src/plugins/chat/
-│   ├── __init__.py         # 插件注册 + 启动初始化
-│   ├── handlers.py         # 指令处理（全部 / 命令）
-│   └── router.py           # 消息路由（普通消息→AI 处理）
-└── tests/
-    ├── conftest.py
-    ├── test_context.py
-    └── test_injection_defense.py
+qqbot/
+├── start.bat / install.sh   # 启动脚本
+├── bot.py                    # 入口
+├── .env.example              # 配置模板
+├── config/                   # 权限 + 人格配置
+├── lib/                      # 核心库
+│   ├── ai_core.py            # AI 处理流程
+│   ├── models/               # 模型客户端
+│   └── tools/                # 搜索工具
+└── src/plugins/chat/         # NoneBot 插件
+```
+
+## 开发
+
+本项目开源在 [GitHub](https://github.com/sleep-into-a-coma/simpleQQbot)。
+
+```bash
+git clone https://github.com/sleep-into-a-coma/simpleQQbot.git
+cd simpleQQbot
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+source .venv/bin/activate   # Linux
+pip install -e .[dev]
+python bot.py
 ```
