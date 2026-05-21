@@ -3,6 +3,7 @@
 # 支持 Ubuntu 22.04+/Debian 12+/CentOS 8+
 # 用法：bash install.sh
 set -e
+OFFLINE=false
 
 # ============================================================
 # 颜色定义
@@ -70,7 +71,12 @@ setup_venv() {
         python3 -m venv .venv
     fi
     source .venv/bin/activate
-    if $OFFLINE && [ -d "wheels" ]; then
+    if $OFFLINE; then
+        if [ ! -d "wheels" ]; then
+            log_error "离线模式需要 wheels/ 目录，但未找到"
+            log_error "请确保完整包已正确解压"
+            exit 1
+        fi
         log_info "离线模式：从 wheels/ 安装依赖..."
         pip install --no-index --find-links=wheels/ -e .
     else
