@@ -2,13 +2,15 @@ import json
 import base64
 from typing import Optional
 import anthropic
+import httpx
 from lib.models.base import BaseModelClient, ChatMessage, ChatResponse, ToolCall, ToolDefinition
 from lib.errors import BotException, E01, E02, E03, E04, E05, E08
 
 
 class AnthropicClient(BaseModelClient):
-    def __init__(self, api_key: str, model: str, supports_vision: bool = True):
-        self.client = anthropic.AsyncAnthropic(api_key=api_key)
+    def __init__(self, api_key: str, model: str, supports_vision: bool = True, proxy_url: str | None = None):
+        http_client = httpx.AsyncClient(proxy=proxy_url) if proxy_url else None
+        self.client = anthropic.AsyncAnthropic(api_key=api_key, http_client=http_client)
         self.model = model
         self.supports_vision = supports_vision
 

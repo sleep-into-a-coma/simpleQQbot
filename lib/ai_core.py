@@ -15,7 +15,7 @@ from lib.tools.search import (
 
 async def _vision_fallback(image_data: bytes, config: AppConfig) -> str:
     """Use vision fallback model to describe an image."""
-    client = create_client(config.vision_fallback)
+    client = create_client(config.vision_fallback, proxy_url=config.proxy_url)
     msg = ChatMessage(
         role="user",
         content="<user_message>\n请用中文一句话描述这张图片的内容。\n</user_message>",
@@ -92,7 +92,7 @@ async def process_message(
                     has_search = True
                     query = tc.arguments.get("query", "")
                     try:
-                        results = execute_search(query, app_config.search_max_results)
+                        results = execute_search(query, app_config.search_max_results, proxy_url=app_config.proxy_url)
                     except Exception:
                         results = []
                     if results:

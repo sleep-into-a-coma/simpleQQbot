@@ -26,10 +26,10 @@ SEARCH_TOOL_DEFINITION = ToolDefinition(
 )
 
 
-def execute_search(query: str, max_results: int = 5) -> list[SearchResult]:
+def execute_search(query: str, max_results: int = 5, proxy_url: str | None = None) -> list[SearchResult]:
     """Execute a DuckDuckGo search and return results."""
     results = []
-    with DDGS() as ddgs:
+    with DDGS(proxy=proxy_url) as ddgs:
         for r in ddgs.text(query, max_results=max_results):
             results.append(SearchResult(
                 title=r["title"],

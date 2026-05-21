@@ -6,12 +6,12 @@ from lib.errors import BotException, E01, E02, E03, E04, E05, E08
 
 
 class OpenAICompatClient(BaseModelClient):
-    def __init__(self, api_base: str, api_key: str, model: str, supports_vision: bool = False):
+    def __init__(self, api_base: str, api_key: str, model: str, supports_vision: bool = False, proxy_url: str | None = None):
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.supports_vision = supports_vision
-        self._http = httpx.AsyncClient(timeout=60)
+        self._http = httpx.AsyncClient(timeout=60, proxy=proxy_url)
 
     async def chat(
         self,
