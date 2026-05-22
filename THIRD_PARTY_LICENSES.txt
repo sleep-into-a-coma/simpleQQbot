@@ -1,0 +1,95 @@
+================================================================================
+                        THIRD-PARTY LICENSE NOTICES
+================================================================================
+
+This project (QQBot AI) uses the following third-party open source software.
+Full license texts are available at the URLs listed below.
+
+================================================================================
+1. Python Runtime Dependencies (via pip)
+================================================================================
+
+The following packages are Python dependencies installed via pip.
+They are bundled as .whl files in the "wheels/" directory (自包含包 only).
+
+--- MIT License ---
+aiosqlite         - MIT     https://github.com/omnilib/aiosqlite
+annotated_types   - MIT     https://github.com/python/annotated-types
+anthropic         - MIT     https://github.com/anthropics/anthropic-sdk-python
+anyio             - MIT     https://github.com/agronholm/anyio
+docstring_parser  - MIT     https://github.com/rr-/docstring_parser
+duckduckgo_search - MIT     https://github.com/deedy5/duckduckgo_search
+exceptiongroup    - MIT     https://github.com/agronholm/exceptiongroup
+h11               - MIT     https://github.com/python-hyper/h11
+httpcore          - MIT     https://github.com/encode/httpcore
+jiter             - MIT     https://github.com/jlowin/jiter
+loguru            - MIT     https://github.com/Delgan/loguru
+nonebot2          - MIT     https://github.com/nonebot/nonebot2
+nonebot_adapter_onebot - MIT https://github.com/nonebot/adapter-onebot
+nonebot_plugin_localstore - MIT https://github.com/nonebot/plugin-localstore
+nonestorage       - MIT     https://github.com/nonebot/nonestorage
+primp             - MIT     https://github.com/deedy5/primp
+pydantic          - MIT     https://github.com/pydantic/pydantic
+pydantic_core     - MIT     https://github.com/pydantic/pydantic-core
+pyyaml            - MIT     https://github.com/yaml/pyyaml
+typing_inspection - MIT     https://github.com/pydantic/typing-inspection
+win32_setctime    - MIT     https://github.com/Delgan/win32-setctime
+
+--- Apache License 2.0 ---
+distro            - Apache-2.0 https://github.com/python-distro/distro
+msgpack           - Apache-2.0 https://github.com/msgpack/msgpack-python
+multidict         - Apache-2.0 https://github.com/aio-libs/multidict
+propcache         - Apache-2.0 https://github.com/aio-libs/propcache
+pygtrie           - Apache-2.0 https://github.com/mina86/pygtrie
+yarl              - Apache-2.0 https://github.com/aio-libs/yarl
+
+--- BSD License (BSD-2-Clause or BSD-3-Clause) ---
+click             - BSD      https://github.com/pallets/click
+colorama          - BSD      https://github.com/tartley/colorama
+h11               - BSD (also MIT) https://github.com/python-hyper/h11
+httpx             - BSD-3-Clause https://github.com/encode/httpx
+idna              - BSD-3-Clause https://github.com/kjd/idna
+lxml              - BSD-3-Clause https://github.com/lxml/lxml
+python-dotenv     - BSD-3-Clause https://github.com/theskumar/python-dotenv
+
+--- Mozilla Public License 2.0 ---
+certifi           - MPL-2.0  https://github.com/certifi/python-certifi
+
+--- Python Software Foundation License ---
+typing_extensions - PSF      https://github.com/python/typing_extensions
+
+--- Dual License (MIT OR Apache-2.0) ---
+sniffio           - MIT OR Apache-2.0 https://github.com/python-trio/sniffio
+
+================================================================================
+2. Python Embedded Runtime (自包含包 only)
+================================================================================
+
+Python 3.11.9 embeddable package is bundled in the "python/" directory.
+License: Python Software Foundation License Version 2 (PSF-2.0)
+Full text: python/LICENSE.txt (included in the package)
+https://docs.python.org/3.11/license.html
+Copyright (c) 2001-2024 Python Software Foundation. All rights reserved.
+
+================================================================================
+3. pip (自包含包 only)
+================================================================================
+
+get-pip.py (pip bootstrapper) is bundled in the "python/" directory.
+pip is licensed under the MIT License.
+https://github.com/pypa/pip/blob/main/LICENSE.txt
+Copyright (c) The pip developers.
+
+================================================================================
+4. NapCatQQ (自包含包 only)
+================================================================================
+
+NapCatQQ binary is bundled in the "napcat/" directory.
+License: Custom source-available license (see napcat/LICENSE.txt)
+https://github.com/NapNeko/NapCatQQ/blob/main/LICENSE
+Key terms: Non-commercial use only. Redistribution requires full license text
+and clear attribution. Modified versions may NOT be publicly released.
+
+================================================================================
+                        END OF THIRD-PARTY NOTICES
+================================================================================
