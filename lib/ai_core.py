@@ -1,6 +1,6 @@
 import time
 from lib.config import AppConfig
-from lib.models.base import ChatMessage, ChatResponse, ToolDefinition
+from lib.models.base import ChatMessage, ChatResponse, ToolCall, ToolDefinition
 from lib.models.factory import resolve_model, create_client
 from lib.errors import BotException
 from lib.permission import get_group_user_names
@@ -11,6 +11,7 @@ from lib.tools.search import (
     format_search_sources,
     SearchResult,
 )
+from lib.context import save_message
 
 
 async def _vision_fallback(image_data: bytes, config: AppConfig) -> str:
@@ -68,6 +69,7 @@ async def process_message(
         user_text=msg_text,
         image_data=img_for_model if client.supports_vision else None,
         group_id=group_id,
+        current_model_name=model_config.name,
     )
 
     # Build tools list
@@ -87,6 +89,13 @@ async def process_message(
                 tool_calls=response.tool_calls,
             ))
 
+            # Persist intermediate assistant message with tool calls
+            tc_list = [{"id": tc.id, "name": tc.name, "arguments": tc.arguments}
+                       for tc in response.tool_calls]
+            await save_message(group_id, user_id, "assistant",
+                             response.content or "",
+                             model_name=model_config.name, tool_calls=tc_list)
+
             for tc in response.tool_calls:
                 if tc.name == "web_search":
                     has_search = True
@@ -103,6 +112,10 @@ async def process_message(
                         content=tool_result_text,
                         tool_call_id=tc.id,
                     ))
+
+                    # Persist intermediate tool result message
+                    await save_message(group_id, user_id, "tool", tool_result_text,
+                                     tool_call_id=tc.id)
         else:
             # No more tool calls — final response
             elapsed_ms = int((time.time() - start_time) * 1000)
@@ -135,11 +148,19 @@ async def _build_initial_messages(
     user_text: str,
     image_data: bytes | None,
     group_id: str,
+    current_model_name: str,
 ) -> list[ChatMessage]:
+    from lib.relay import detect_relay
+
     messages = []
 
     if system_prompt:
         messages.append(ChatMessage(role="system", content=system_prompt))
+
+    # Inject relay handoff if model switch detected
+    relay = detect_relay(history, current_model_name)
+    if relay:
+        messages.append(ChatMessage(role="user", content=relay))
 
     # Collect all user_ids from history for batch name lookup (group only)
     if group_id != "private" and history:
@@ -156,9 +177,23 @@ async def _build_initial_messages(
                 content = f"<群聊消息>{display_name}说：{h['content']}</群聊消息>"
             else:
                 content = f"<用户消息>\n{h['content']}\n</用户消息>"
+            messages.append(ChatMessage(role=h["role"], content=content))
         else:
-            content = h["content"]
-        messages.append(ChatMessage(role=h["role"], content=content))
+            # Rebuild tool_calls from JSON if present
+            tc_list = []
+            if h.get("tool_calls"):
+                for tc_data in h["tool_calls"]:
+                    tc_list.append(ToolCall(
+                        id=tc_data["id"],
+                        name=tc_data["name"],
+                        arguments=tc_data["arguments"],
+                    ))
+            messages.append(ChatMessage(
+                role=h["role"],
+                content=h["content"],
+                tool_calls=tc_list,
+                tool_call_id=h.get("tool_call_id"),
+            ))
 
     wrapped_text = f"<用户消息>\n{user_text}\n</用户消息>"
     user_msg = ChatMessage(role="user", content=wrapped_text)
