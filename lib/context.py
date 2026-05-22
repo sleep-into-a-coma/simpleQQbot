@@ -10,14 +10,14 @@ async def get_history(group_id: str, user_id: str) -> list[dict]:
     try:
         if group_id == "private":
             cursor = await db.execute(
-                """SELECT role, content FROM conversation_memory
+                """SELECT role, content, model_name, tool_calls, tool_call_id FROM conversation_memory
                    WHERE group_id = ? AND user_id = ?
                    ORDER BY created_at DESC LIMIT ?""",
                 (group_id, user_id, MAX_MESSAGES),
             )
         else:
             cursor = await db.execute(
-                """SELECT role, content, user_id FROM conversation_memory
+                """SELECT role, content, model_name, tool_calls, tool_call_id, user_id FROM conversation_memory
                    WHERE group_id = ?
                    ORDER BY created_at DESC LIMIT ?""",
                 (group_id, MAX_MESSAGES),
@@ -29,29 +29,49 @@ async def get_history(group_id: str, user_id: str) -> list[dict]:
             entry = {"role": row["role"], "content": row["content"]}
             if group_id != "private" and "user_id" in row.keys():
                 entry["user_id"] = row["user_id"]
+            if row["model_name"]:
+                entry["model_name"] = row["model_name"]
+            if row["tool_calls"]:
+                import json
+                try:
+                    entry["tool_calls"] = json.loads(row["tool_calls"])
+                except json.JSONDecodeError:
+                    pass  # silently skip malformed JSON
+            if row["tool_call_id"]:
+                entry["tool_call_id"] = row["tool_call_id"]
             result.append(entry)
         return result
     finally:
         await db.close()
 
 
-async def save_message(group_id: str, user_id: str, role: str, content: str):
+async def save_message(group_id: str, user_id: str, role: str, content: str,
+                       model_name: str | None = None,
+                       tool_calls: list | None = None,
+                       tool_call_id: str | None = None):
     """Save a single message to conversation history."""
+    import json
     db = await get_db()
     try:
+        tool_calls_json = json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None
         await db.execute(
-            "INSERT INTO conversation_memory (group_id, user_id, role, content) VALUES (?, ?, ?, ?)",
-            (group_id, user_id, role, content),
+            """INSERT INTO conversation_memory
+               (group_id, user_id, role, content, model_name, tool_calls, tool_call_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (group_id, user_id, role, content, model_name, tool_calls_json, tool_call_id),
         )
         await db.commit()
     finally:
         await db.close()
 
 
-async def save_turn(group_id: str, user_id: str, user_msg: str, assistant_msg: str):
+async def save_turn(group_id: str, user_id: str, user_msg: str, assistant_msg: str,
+                    model_name: str | None = None,
+                    tool_calls: list | None = None):
     """Save a complete conversation turn (user + assistant)."""
     await save_message(group_id, user_id, "user", user_msg)
-    await save_message(group_id, user_id, "assistant", assistant_msg)
+    await save_message(group_id, user_id, "assistant", assistant_msg,
+                       model_name=model_name, tool_calls=tool_calls)
     await _trim_history(group_id, user_id)
 
 
