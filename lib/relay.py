@@ -4,14 +4,21 @@
 def detect_relay(history: list[dict], current_model_name: str) -> str | None:
     """
     Scan history for assistant messages from a different model.
-    Returns relay prompt string if a switch is detected, else None.
+    Only fires if the most recent assistant was NOT from the current model,
+    so the relay prompt appears once per switch, not on every subsequent message.
     """
+    last_assistant_model: str | None = None
     previous_models: set[str] = set()
     for h in history:
         if h["role"] == "assistant":
             model = h.get("model_name")
-            if model and model != current_model_name:
-                previous_models.add(model)
+            if model:
+                last_assistant_model = model
+                if model != current_model_name:
+                    previous_models.add(model)
+
+    if last_assistant_model is None or last_assistant_model == current_model_name:
+        return None
 
     if not previous_models:
         return None
