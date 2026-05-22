@@ -1,4 +1,9 @@
+import json
+import logging
+
 from lib.db import get_db
+
+logger = logging.getLogger(__name__)
 
 MAX_HISTORY_ROUNDS = 20
 MAX_MESSAGES = MAX_HISTORY_ROUNDS * 2  # user + assistant per round
@@ -32,11 +37,10 @@ async def get_history(group_id: str, user_id: str) -> list[dict]:
             if row["model_name"]:
                 entry["model_name"] = row["model_name"]
             if row["tool_calls"]:
-                import json
                 try:
                     entry["tool_calls"] = json.loads(row["tool_calls"])
                 except json.JSONDecodeError:
-                    pass  # silently skip malformed JSON
+                    logger.warning("Malformed tool_calls JSON in conversation_memory row")
             if row["tool_call_id"]:
                 entry["tool_call_id"] = row["tool_call_id"]
             result.append(entry)
@@ -50,7 +54,6 @@ async def save_message(group_id: str, user_id: str, role: str, content: str,
                        tool_calls: list | None = None,
                        tool_call_id: str | None = None):
     """Save a single message to conversation history."""
-    import json
     db = await get_db()
     try:
         tool_calls_json = json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None
