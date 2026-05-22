@@ -24,6 +24,9 @@ async def init_db():
                 user_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
+                model_name TEXT DEFAULT NULL,
+                tool_calls TEXT DEFAULT NULL,
+                tool_call_id TEXT DEFAULT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
