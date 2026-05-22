@@ -94,6 +94,22 @@ async def init_db():
             );
         """)
         await db.commit()
+        # ----- auto migration: add columns if missing -----
+        cursor = await db.execute("PRAGMA table_info(conversation_memory)")
+        columns = [row[1] for row in await cursor.fetchall()]
+        if "model_name" not in columns:
+            await db.execute(
+                "ALTER TABLE conversation_memory ADD COLUMN model_name TEXT DEFAULT NULL"
+            )
+        if "tool_calls" not in columns:
+            await db.execute(
+                "ALTER TABLE conversation_memory ADD COLUMN tool_calls TEXT DEFAULT NULL"
+            )
+        if "tool_call_id" not in columns:
+            await db.execute(
+                "ALTER TABLE conversation_memory ADD COLUMN tool_call_id TEXT DEFAULT NULL"
+            )
+        # -------------------------------------------------
         from lib.config import load_config
         config = load_config()
         await db.execute(
