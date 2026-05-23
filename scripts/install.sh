@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PrismBot + NapCat 一键安装脚本
+# SP-Bot + NapCat 一键安装脚本
 # 支持 Ubuntu 22.04+/Debian 12+
 # 用法：bash install.sh
 # 注意：NapCat v4.x 需要 Node.js 18+ 和 Linux QQNT
@@ -229,10 +229,10 @@ install_services() {
     CURRENT_USER=$(whoami)
     NAPCAT_DIR="$HOME/napcat"
 
-    # === prismbot.service ===
-    sudo tee /etc/systemd/system/prismbot.service > /dev/null << BOTEOF
+    # === sp-bot.service ===
+    sudo tee /etc/systemd/system/sp-bot.service > /dev/null << BOTEOF
 [Unit]
-Description=PrismBot
+Description=SP-Bot
 After=network-online.target
 Wants=network-online.target
 
@@ -248,7 +248,7 @@ StartLimitBurst=10
 StartLimitIntervalSec=300
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=prismbot
+SyslogIdentifier=sp-bot
 
 [Install]
 WantedBy=multi-user.target
@@ -258,8 +258,8 @@ BOTEOF
     sudo tee /etc/systemd/system/napcat.service > /dev/null << NAPEOF
 [Unit]
 Description=NapCat QQ Client
-After=prismbot.service
-Wants=prismbot.service
+After=sp-bot.service
+Wants=sp-bot.service
 
 [Service]
 Type=simple
@@ -282,7 +282,7 @@ WantedBy=multi-user.target
 NAPEOF
 
     sudo systemctl daemon-reload
-    sudo systemctl enable prismbot napcat
+    sudo systemctl enable sp-bot napcat
 
     log_info "systemd 服务已安装并启用开机自启"
 }
@@ -292,7 +292,7 @@ NAPEOF
 # ============================================================
 start_services() {
     log_info "启动服务..."
-    sudo systemctl start prismbot
+    sudo systemctl start sp-bot
     sleep 2
     sudo systemctl start napcat
     sleep 3
@@ -307,13 +307,13 @@ start_services() {
     echo "  （看日志中的二维码链接，用QQ小号扫码）"
     echo ""
     echo "常用命令："
-    echo "  查看Bot状态:  sudo systemctl status prismbot"
+    echo "  查看Bot状态:  sudo systemctl status sp-bot"
     echo "  查看NapCat:   sudo systemctl status napcat"
-    echo "  实时日志:     sudo journalctl -u prismbot -f"
+    echo "  实时日志:     sudo journalctl -u sp-bot -f"
     echo "               sudo journalctl -u napcat -f"
-    echo "  停止:         sudo systemctl stop prismbot napcat"
-    echo "  卸载:         sudo systemctl disable --now prismbot napcat"
-    echo "               sudo rm /etc/systemd/system/prismbot.service"
+    echo "  停止:         sudo systemctl stop sp-bot napcat"
+    echo "  卸载:         sudo systemctl disable --now sp-bot napcat"
+    echo "               sudo rm /etc/systemd/system/sp-bot.service"
     echo "               sudo rm /etc/systemd/system/napcat.service"
 }
 
@@ -332,7 +332,7 @@ main() {
 
     echo ""
     echo "========================================"
-    echo "  PrismBot + NapCat 一键安装"
+    echo "  SP-Bot + NapCat 一键安装"
     echo "========================================"
     echo ""
 

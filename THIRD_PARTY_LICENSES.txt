@@ -2,7 +2,7 @@
                         THIRD-PARTY LICENSE NOTICES
 ================================================================================
 
-This project (PrismBot) uses the following third-party open source software.
+This project (SP-Bot) uses the following third-party open source software.
 Full license texts are available at the URLs listed below.
 
 ================================================================================

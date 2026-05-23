@@ -1,4 +1,4 @@
-# PrismBot
+# SP-Bot
 
 基于 [NoneBot2](https://github.com/nonebot/nonebot2) 的 QQ 群聊 AI Bot，支持多模型切换、多人格、图片识别、联网搜索。
 
@@ -17,21 +17,21 @@
 
 ### Windows
 
-1. 下载 [最新发布](https://github.com/sleep-into-a-coma/PrismBot/releases)
+1. 下载 [最新发布](https://github.com/sleep-into-a-coma/SP-Bot/releases)
 2. 解压，复制 `.env.example` 为 `.env`，填写 API Key
 3. 双击 `start.bat`
 
 ### Linux
 
 ```bash
-tar -xzf PrismBot-linux-light.tar.gz && cd PrismBot && bash install.sh
+tar -xzf SP-Bot-linux-light.tar.gz && cd SP-Bot && bash install.sh
 ```
 
 ### Docker
 
 ```bash
-git clone https://github.com/sleep-into-a-coma/PrismBot.git
-cd PrismBot && cp .env.example .env && nano .env
+git clone https://github.com/sleep-into-a-coma/SP-Bot.git
+cd SP-Bot && cp .env.example .env && nano .env
 docker compose up -d
 ```
 
