@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # QQBot AI + NapCat 一键安装脚本
-# 支持 Ubuntu 22.04+/Debian 12+/CentOS 8+
+# 支持 Ubuntu 22.04+/Debian 12+
 # 用法：bash install.sh
+# 注意：NapCat v4.x 需要 Node.js 18+ 和 Linux QQNT
 set -e
 OFFLINE=false
 
@@ -32,16 +33,9 @@ detect_os() {
 
     case "$OS" in
         ubuntu|debian) PKG_MGR="apt";;
-        centos|rhel|fedora)
-            if command -v dnf &>/dev/null; then
-                PKG_MGR="dnf"
-            else
-                PKG_MGR="yum"
-            fi
-            ;;
         *)
             log_error "不支持的操作系统: $OS"
-            log_error "支持: Ubuntu 22.04+, Debian 12+, CentOS 8+"
+            log_error "支持: Ubuntu 22.04+, Debian 12+"
             exit 1
             ;;
     esac
@@ -55,9 +49,18 @@ install_system_deps() {
     log_info "安装系统依赖..."
     if [ "$PKG_MGR" = "apt" ]; then
         sudo apt update
-        sudo apt install -y python3 python3-venv python3-pip git wget curl
+        sudo apt install -y python3 python3-venv python3-pip git wget curl unzip nodejs xvfb libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libsecret-1-0
     else
-        sudo $PKG_MGR install -y python3 python3-venv python3-pip git wget curl
+        log_error "当前仅支持 Debian/Ubuntu 系统"
+        exit 1
+    fi
+
+    # Verify Node.js >= 18
+    NODE_VER=$(node -v 2>/dev/null | sed 's/v//' | cut -d. -f1)
+    if [ -z "$NODE_VER" ] || [ "$NODE_VER" -lt 18 ]; then
+        log_info "安装 Node.js 20.x..."
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt install -y nodejs
     fi
     log_info "系统依赖安装完成"
 }
@@ -117,35 +120,45 @@ ENVEOF
 }
 
 # ============================================================
-# 4. 下载NapCat
+# 4. 安装 Linux QQNT
+# ============================================================
+install_qqnt() {
+    if command -v qq &>/dev/null; then
+        log_info "QQNT 已安装，跳过"
+        return
+    fi
+
+    log_info "安装 Linux QQNT..."
+    QQ_DEB="/tmp/linuxqq_amd64.deb"
+    QQ_URL="https://dldir1.qq.com/qqfile/qq/QQNT/94704804/linuxqq_3.2.23-44343_amd64.deb"
+    wget -q --show-progress "$QQ_URL" -O "$QQ_DEB" || {
+        log_error "QQNT 下载失败"
+        exit 1
+    }
+    sudo dpkg -i "$QQ_DEB" || sudo apt install -f -y
+    rm -f "$QQ_DEB"
+    log_info "QQNT 安装完成"
+}
+
+# ============================================================
+# 5. 下载NapCat
 # ============================================================
 install_napcat() {
     NAPCAT_DIR="$HOME/napcat"
-    if [ -d "$NAPCAT_DIR" ] && [ -f "$NAPCAT_DIR/napcat" ]; then
+    if [ -d "$NAPCAT_DIR" ] && [ -f "$NAPCAT_DIR/napcat.mjs" ]; then
         log_info "NapCat 已安装，跳过"
         return
     fi
 
     if $OFFLINE; then
         log_info "离线模式：从本地安装 NapCat..."
-        ARCH=$(uname -m)
-        case "$ARCH" in
-            x86_64)  NAPCAT_ARCH="amd64";;
-            aarch64) NAPCAT_ARCH="arm64";;
-            *)
-                log_error "不支持的CPU架构: $ARCH"
-                exit 1
-                ;;
-        esac
-        NAPCAT_TARBALL="napcat/napcat-linux-${NAPCAT_ARCH}.tar.gz"
-        if [ ! -f "$NAPCAT_TARBALL" ]; then
-            log_error "未找到 $NAPCAT_TARBALL，离线安装失败"
+        if [ ! -f "napcat/NapCat.Shell.zip" ]; then
+            log_error "未找到 napcat/NapCat.Shell.zip，离线安装失败"
             log_error "请确保完整包已正确解压"
             exit 1
         fi
         mkdir -p "$NAPCAT_DIR"
-        tar -xzf "$NAPCAT_TARBALL" -C "$NAPCAT_DIR"
-        chmod +x "$NAPCAT_DIR/napcat"
+        unzip -qo "napcat/NapCat.Shell.zip" -d "$NAPCAT_DIR"
         log_info "NapCat 安装完成: $NAPCAT_DIR"
         return
     fi
@@ -153,34 +166,22 @@ install_napcat() {
     log_info "下载 NapCat..."
     mkdir -p "$NAPCAT_DIR"
 
-    ARCH=$(uname -m)
-    case "$ARCH" in
-        x86_64)  NAPCAT_ARCH="amd64";;
-        aarch64) NAPCAT_ARCH="arm64";;
-        *)
-            log_error "不支持的CPU架构: $ARCH"
-            log_error "NapCat 支持: x86_64, aarch64"
-            exit 1
-            ;;
-    esac
-
-    NAPCAT_URL="https://github.com/NapNeko/NapCatQQ/releases/latest/download/NapCat.linux-${NAPCAT_ARCH}.tar.gz"
+    NAPCAT_URL="https://github.com/NapNeko/NapCatQQ/releases/latest/download/NapCat.Shell.zip"
 
     log_info "下载: $NAPCAT_URL"
-    wget -q --show-progress "$NAPCAT_URL" -O /tmp/napcat.tar.gz || {
+    wget -q --show-progress "$NAPCAT_URL" -O /tmp/napcat.zip || {
         log_error "下载失败，请检查网络或手动下载 NapCat 到 $NAPCAT_DIR"
         log_error "NapCat releases: https://github.com/NapNeko/NapCatQQ/releases"
         exit 1
     }
 
-    tar -xzf /tmp/napcat.tar.gz -C "$NAPCAT_DIR"
-    rm -f /tmp/napcat.tar.gz
-    chmod +x "$NAPCAT_DIR/napcat"
+    unzip -qo /tmp/napcat.zip -d "$NAPCAT_DIR"
+    rm -f /tmp/napcat.zip
     log_info "NapCat 安装完成: $NAPCAT_DIR"
 }
 
 # ============================================================
-# 5. 写入NapCat配置
+# 6. 写入NapCat配置
 # ============================================================
 configure_napcat() {
     NAPCAT_CONFIG_DIR="$HOME/napcat/config"
@@ -221,11 +222,12 @@ CONFEOF
 }
 
 # ============================================================
-# 6. 安装systemd服务
+# 7. 安装systemd服务
 # ============================================================
 install_services() {
     PYTHON_BIN="${PROJECT_DIR}/.venv/bin/python"
     CURRENT_USER=$(whoami)
+    NAPCAT_DIR="$HOME/napcat"
 
     # === qqbot.service ===
     sudo tee /etc/systemd/system/qqbot.service > /dev/null << BOTEOF
@@ -252,8 +254,7 @@ SyslogIdentifier=qqbot
 WantedBy=multi-user.target
 BOTEOF
 
-    # === napcat.service ===
-    NAPCAT_DIR="$HOME/napcat"
+    # === napcat.service (NapCat v4.x) ===
     sudo tee /etc/systemd/system/napcat.service > /dev/null << NAPEOF
 [Unit]
 Description=NapCat QQ Client
@@ -264,7 +265,10 @@ Wants=qqbot.service
 Type=simple
 User=${CURRENT_USER}
 WorkingDirectory=${NAPCAT_DIR}
-ExecStart=${NAPCAT_DIR}/napcat
+ExecStart=/usr/bin/node ${NAPCAT_DIR}/napcat.mjs
+Environment=NAPCAT_WRAPPER_PATH=/opt/QQ/resources/app/wrapper.node
+Environment=NAPCAT_QQ_PACKAGE_INFO_PATH=/opt/QQ/resources/app/package.json
+Environment=NAPCAT_QQ_VERSION_CONFIG_PATH=/opt/QQ/resources/app/versions/config.json
 Restart=on-failure
 RestartSec=10
 StartLimitBurst=10
@@ -284,7 +288,7 @@ NAPEOF
 }
 
 # ============================================================
-# 7. 启动服务
+# 8. 启动服务
 # ============================================================
 start_services() {
     log_info "启动服务..."
@@ -333,10 +337,11 @@ main() {
     echo ""
 
     if $OFFLINE; then
-        log_info "离线模式：跳过系统依赖安装（请确保 python3 已安装）"
+        log_info "离线模式：跳过系统依赖安装（请确保 python3/nodejs 已安装）"
     else
         detect_os
         install_system_deps
+        install_qqnt
     fi
     setup_venv
     setup_env
