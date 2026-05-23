@@ -12,6 +12,7 @@ data/logs/
 *.db-journal
 *.db-wal
 release/
+releases/
 server/
 
 # NapCat runtime data
