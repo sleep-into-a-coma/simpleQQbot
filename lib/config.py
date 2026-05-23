@@ -44,6 +44,9 @@ class AppConfig:
     private_chat_enabled: bool
     think_enabled: bool
     proxy_url: Optional[str] = None
+    search_backend: str = "duckduckgo"
+    bing_api_key: Optional[str] = None
+    searxng_url: Optional[str] = None
 
 
 def _load_models_from_env() -> tuple[str, list[ModelConfig], ModelConfig, bool, int]:
@@ -159,6 +162,9 @@ def load_config() -> AppConfig:
     admins, wl_users, wl_groups, rl_user, rl_group, pc_enabled, think_enabled = _load_permissions()
 
     proxy_url = os.getenv("PROXY_URL") or None
+    search_backend = os.getenv("SEARCH_BACKEND", "duckduckgo")
+    bing_api_key = os.getenv("BING_API_KEY") or None
+    searxng_url = os.getenv("SEARXNG_URL") or None
 
     return AppConfig(
         default_model=default_model,
@@ -176,4 +182,7 @@ def load_config() -> AppConfig:
         private_chat_enabled=pc_enabled,
         think_enabled=think_enabled,
         proxy_url=proxy_url,
+        search_backend=search_backend,
+        bing_api_key=bing_api_key,
+        searxng_url=searxng_url,
     )
