@@ -108,6 +108,7 @@ MODEL_${default_model}_API_BASE=${api_base}
 MODEL_${default_model}_API_KEY=${api_key}
 MODEL_${default_model}_VISION=false
 SEARCH_ENABLED=true
+SEARCH_BACKEND=duckduckgo
 SEARCH_MAX_RESULTS=5
 ONEBOT_WS_PORT=8989
 PORT=8989
