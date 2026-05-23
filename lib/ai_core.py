@@ -55,7 +55,10 @@ async def process_message(
     # Create search backend
     search_backend = None
     if app_config.search_enabled:
-        search_backend = create_search_backend(app_config)
+        try:
+            search_backend = create_search_backend(app_config)
+        except ValueError:
+            search_backend = None
 
     # Vision fallback: if image present and model doesn't support vision
     msg_text = user_text

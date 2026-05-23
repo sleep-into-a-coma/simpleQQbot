@@ -166,6 +166,15 @@ def load_config() -> AppConfig:
     bing_api_key = os.getenv("BING_API_KEY") or None
     searxng_url = os.getenv("SEARXNG_URL") or None
 
+    # Validate search backend config early (fail fast)
+    if search_enabled:
+        if search_backend == "bing" and not bing_api_key:
+            raise ValueError("BING_API_KEY is required when SEARCH_BACKEND=bing")
+        if search_backend == "searxng" and not searxng_url:
+            raise ValueError("SEARXNG_URL is required when SEARCH_BACKEND=searxng")
+        if search_backend not in ("duckduckgo", "bing", "searxng"):
+            raise ValueError(f"Unknown search backend: {search_backend}")
+
     return AppConfig(
         default_model=default_model,
         models=models,
