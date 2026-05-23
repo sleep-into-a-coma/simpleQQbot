@@ -6,7 +6,7 @@ from lib.errors import BotException
 from lib.permission import get_group_user_names
 from lib.tools.search import (
     SEARCH_TOOL_DEFINITION,
-    execute_search,
+    create_search_backend,
     format_search_results,
     format_search_sources,
     SearchResult,
@@ -51,6 +51,11 @@ async def process_message(
 
     # Resolve model
     model_config, client = resolve_model(app_config, model_name)
+
+    # Create search backend
+    search_backend = None
+    if app_config.search_enabled:
+        search_backend = create_search_backend(app_config)
 
     # Vision fallback: if image present and model doesn't support vision
     msg_text = user_text
@@ -100,9 +105,9 @@ async def process_message(
                 if tc.name == "web_search":
                     has_search = True
                     query = tc.arguments.get("query", "")
-                    try:
-                        results = execute_search(query, app_config.search_max_results, proxy_url=app_config.proxy_url)
-                    except Exception:
+                    if search_backend:
+                        results = search_backend.search(query, app_config.search_max_results)
+                    else:
                         results = []
                     if results:
                         sources = results
