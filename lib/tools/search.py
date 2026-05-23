@@ -1,7 +1,10 @@
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from duckduckgo_search import DDGS
 from lib.models.base import ToolDefinition
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -70,6 +73,7 @@ class BingSearchBackend(SearchBackend):
                 "mkt": "zh-CN",
             })
             if resp.status_code != 200:
+                _logger.warning("Bing search returned HTTP %d: %s", resp.status_code, resp.text[:200])
                 return []
             data = resp.json()
             web_pages = data.get("webPages", {}).get("value", [])
@@ -101,6 +105,7 @@ class SearXNGBackend(SearchBackend):
                 "categories": "general",
             })
             if resp.status_code != 200:
+                _logger.warning("SearXNG search returned HTTP %d: %s", resp.status_code, resp.text[:200])
                 return []
             data = resp.json()
             items = data.get("results", [])

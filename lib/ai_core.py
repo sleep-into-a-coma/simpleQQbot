@@ -13,6 +13,19 @@ from lib.tools.search import (
 )
 from lib.context import save_message
 
+_cached_backend = None
+_cached_config_key = None
+
+
+def _get_search_backend(config):
+    """Create or reuse the search backend. Config rarely changes after startup."""
+    global _cached_backend, _cached_config_key
+    key = (config.search_backend, config.bing_api_key, config.searxng_url, config.proxy_url)
+    if _cached_backend is None or _cached_config_key != key:
+        _cached_backend = create_search_backend(config)
+        _cached_config_key = key
+    return _cached_backend
+
 
 async def _vision_fallback(image_data: bytes, config: AppConfig) -> str:
     """Use vision fallback model to describe an image."""
@@ -52,11 +65,11 @@ async def process_message(
     # Resolve model
     model_config, client = resolve_model(app_config, model_name)
 
-    # Create search backend
+    # Create or reuse search backend
     search_backend = None
     if app_config.search_enabled:
         try:
-            search_backend = create_search_backend(app_config)
+            search_backend = _get_search_backend(app_config)
         except ValueError:
             search_backend = None
 
