@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# QQBot AI + NapCat 一键安装脚本
+# PrismBot + NapCat 一键安装脚本
 # 支持 Ubuntu 22.04+/Debian 12+
 # 用法：bash install.sh
 # 注意：NapCat v4.x 需要 Node.js 18+ 和 Linux QQNT
@@ -229,10 +229,10 @@ install_services() {
     CURRENT_USER=$(whoami)
     NAPCAT_DIR="$HOME/napcat"
 
-    # === qqbot.service ===
-    sudo tee /etc/systemd/system/qqbot.service > /dev/null << BOTEOF
+    # === prismbot.service ===
+    sudo tee /etc/systemd/system/prismbot.service > /dev/null << BOTEOF
 [Unit]
-Description=QQBot AI
+Description=PrismBot
 After=network-online.target
 Wants=network-online.target
 
@@ -248,7 +248,7 @@ StartLimitBurst=10
 StartLimitIntervalSec=300
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=qqbot
+SyslogIdentifier=prismbot
 
 [Install]
 WantedBy=multi-user.target
@@ -258,8 +258,8 @@ BOTEOF
     sudo tee /etc/systemd/system/napcat.service > /dev/null << NAPEOF
 [Unit]
 Description=NapCat QQ Client
-After=qqbot.service
-Wants=qqbot.service
+After=prismbot.service
+Wants=prismbot.service
 
 [Service]
 Type=simple
@@ -282,7 +282,7 @@ WantedBy=multi-user.target
 NAPEOF
 
     sudo systemctl daemon-reload
-    sudo systemctl enable qqbot napcat
+    sudo systemctl enable prismbot napcat
 
     log_info "systemd 服务已安装并启用开机自启"
 }
@@ -292,7 +292,7 @@ NAPEOF
 # ============================================================
 start_services() {
     log_info "启动服务..."
-    sudo systemctl start qqbot
+    sudo systemctl start prismbot
     sleep 2
     sudo systemctl start napcat
     sleep 3
@@ -307,13 +307,13 @@ start_services() {
     echo "  （看日志中的二维码链接，用QQ小号扫码）"
     echo ""
     echo "常用命令："
-    echo "  查看Bot状态:  sudo systemctl status qqbot"
+    echo "  查看Bot状态:  sudo systemctl status prismbot"
     echo "  查看NapCat:   sudo systemctl status napcat"
-    echo "  实时日志:     sudo journalctl -u qqbot -f"
+    echo "  实时日志:     sudo journalctl -u prismbot -f"
     echo "               sudo journalctl -u napcat -f"
-    echo "  停止:         sudo systemctl stop qqbot napcat"
-    echo "  卸载:         sudo systemctl disable --now qqbot napcat"
-    echo "               sudo rm /etc/systemd/system/qqbot.service"
+    echo "  停止:         sudo systemctl stop prismbot napcat"
+    echo "  卸载:         sudo systemctl disable --now prismbot napcat"
+    echo "               sudo rm /etc/systemd/system/prismbot.service"
     echo "               sudo rm /etc/systemd/system/napcat.service"
 }
 
@@ -332,7 +332,7 @@ main() {
 
     echo ""
     echo "========================================"
-    echo "  QQBot AI + NapCat 一键安装"
+    echo "  PrismBot + NapCat 一键安装"
     echo "========================================"
     echo ""
 

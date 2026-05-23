@@ -6,7 +6,7 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env:ro
     networks:
-      - qqbot-net
+      - prismbot-net
     restart: unless-stopped
 
   napcat:
@@ -24,12 +24,12 @@ services:
       - ./napcat/QQ:/app/.config/QQ
       - ./napcat/config:/app/napcat/config
     networks:
-      - qqbot-net
+      - prismbot-net
     depends_on:
       bot:
         condition: service_healthy
     restart: unless-stopped
 
 networks:
-  qqbot-net:
+  prismbot-net:
     driver: bridge
